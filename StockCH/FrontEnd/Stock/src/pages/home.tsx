@@ -35,14 +35,26 @@ export function Inicio({ onNavigate }: InicioProps) {
       descripcion: 'Gestionar y dar de alta nuevos colores en el sistema.',
       id: 'colores',
       variante: 'info',
-    }
+    },
+    {
+      titulo: 'Cargar Localidades',
+      descripcion: 'Administrar las localidades disponibles para los talleres.',
+      id: 'localidades',
+      variante: 'info', 
+    },
+    {
+      titulo: 'Egresos de Taller',
+      descripcion: 'Ver prendas que te debe cada taller y registrar las entregas.',
+      id: 'egresos-taller',
+      variante: 'danger', 
+    },
   ];
 
   return (
     <Container className="d-flex flex-column align-items-center justify-content-center" style={{ minHeight: '80vh' }}>
       <div className="text-center mb-5">
         <h1 className="fw-bold text-uppercase tracking-wide" style={{ fontSize: '2.5rem' }}>
-          Bienevenido al Sistema
+          Bienvenido al Sistema
         </h1>
         <p className="text-muted fs-5">Que quieres hacer hoy?</p>
       </div>

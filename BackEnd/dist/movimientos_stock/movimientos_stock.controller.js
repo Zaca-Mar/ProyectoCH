@@ -22,13 +22,17 @@ let MovimientosStockController = class MovimientosStockController {
         this.movimientosStockService = movimientosStockService;
     }
     create(createMovimientosStockDto) {
+        console.log('=== CONTROLADOR BACKEND: DATOS RECIBIDOS ===');
+        console.log(createMovimientosStockDto);
+        console.log('============================================');
         return this.movimientosStockService.create(createMovimientosStockDto);
     }
     findAll() {
         return this.movimientosStockService.findAll();
     }
     filter(idTaller, idEstado) {
-        return this.movimientosStockService.findByTallerAndEstado(+idTaller, +idEstado);
+        const estadoParsed = idEstado ? Number(idEstado) : 0;
+        return this.movimientosStockService.findByTallerAndEstado(Number(idTaller), estadoParsed);
     }
 };
 exports.MovimientosStockController = MovimientosStockController;

@@ -15,25 +15,24 @@ const articulo_entity_1 = require("../../articulos/entities/articulo.entity");
 const color_entity_1 = require("../../color/entities/color.entity");
 const taller_entity_1 = require("../../taller/entities/taller.entity");
 const estado_entity_1 = require("../../estado/entities/estado.entity");
+const talle_entity_1 = require("../../talle/entities/talle.entity");
 let MovimientosStock = class MovimientosStock {
     id_movimiento;
-    fecha_hora_movimiento;
     tipo_movimiento;
     cantidad;
+    observacion;
+    fecha;
     articulo;
     color;
     taller;
     estado;
+    talle;
 };
 exports.MovimientosStock = MovimientosStock;
 __decorate([
     (0, typeorm_1.PrimaryGeneratedColumn)(),
     __metadata("design:type", Number)
 ], MovimientosStock.prototype, "id_movimiento", void 0);
-__decorate([
-    (0, typeorm_1.CreateDateColumn)({ type: 'timestamp' }),
-    __metadata("design:type", Date)
-], MovimientosStock.prototype, "fecha_hora_movimiento", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'enum', enum: ['INGRESO', 'EGRESO'] }),
     __metadata("design:type", String)
@@ -42,6 +41,14 @@ __decorate([
     (0, typeorm_1.Column)({ type: 'int' }),
     __metadata("design:type", Number)
 ], MovimientosStock.prototype, "cantidad", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 255, nullable: true }),
+    __metadata("design:type", String)
+], MovimientosStock.prototype, "observacion", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'date', nullable: true }),
+    __metadata("design:type", String)
+], MovimientosStock.prototype, "fecha", void 0);
 __decorate([
     (0, typeorm_1.ManyToOne)(() => articulo_entity_1.Articulo, { eager: true }),
     (0, typeorm_1.JoinColumn)({ name: 'id_articulo' }),
@@ -62,6 +69,11 @@ __decorate([
     (0, typeorm_1.JoinColumn)({ name: 'id_estado' }),
     __metadata("design:type", estado_entity_1.Estado)
 ], MovimientosStock.prototype, "estado", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => talle_entity_1.Talle, { eager: true, nullable: false }),
+    (0, typeorm_1.JoinColumn)({ name: 'id_talle' }),
+    __metadata("design:type", talle_entity_1.Talle)
+], MovimientosStock.prototype, "talle", void 0);
 exports.MovimientosStock = MovimientosStock = __decorate([
     (0, typeorm_1.Entity)('movimientos_stock')
 ], MovimientosStock);

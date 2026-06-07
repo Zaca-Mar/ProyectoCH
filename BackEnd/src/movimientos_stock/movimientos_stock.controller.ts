@@ -8,6 +8,9 @@ export class MovimientosStockController {
 
   @Post()
   create(@Body() createMovimientosStockDto: CreateMovimientosStockDto) {
+    console.log('=== CONTROLADOR BACKEND: DATOS RECIBIDOS ===');
+    console.log(createMovimientosStockDto);
+    console.log('============================================');
     return this.movimientosStockService.create(createMovimientosStockDto);
   }
 
@@ -16,12 +19,18 @@ export class MovimientosStockController {
     return this.movimientosStockService.findAll();
   }
 
-  // Endpoint para filtrar (Ej: /movimientos-stock/filtrar?id_taller=2&id_estado=1)
+  // Endpoint para filtrar (Ej: /movimientos-stock/filtrar?id_taller=4)
   @Get('filtrar')
   filter(
     @Query('id_taller') idTaller: string,
-    @Query('id_estado') idEstado: string
+    @Query('id_estado') idEstado?: string, // 🔒 Opcional
   ) {
-    return this.movimientosStockService.findByTallerAndEstado(+idTaller, +idEstado);
+    // Si viene idEstado lo convertimos, si no pasamos 0 para cumplir con el tipo number
+    const estadoParsed = idEstado ? Number(idEstado) : 0;
+
+    return this.movimientosStockService.findByTallerAndEstado(
+      Number(idTaller),
+      estadoParsed,
+    );
   }
 }

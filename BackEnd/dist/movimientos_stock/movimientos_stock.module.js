@@ -16,6 +16,7 @@ const articulos_module_1 = require("../articulos/articulos.module");
 const taller_module_1 = require("../taller/taller.module");
 const estado_module_1 = require("../estado/estado.module");
 const color_module_1 = require("../color/color.module");
+const talle_module_1 = require("../talle/talle.module");
 let MovimientosStockModule = class MovimientosStockModule {
 };
 exports.MovimientosStockModule = MovimientosStockModule;
@@ -27,6 +28,7 @@ exports.MovimientosStockModule = MovimientosStockModule = __decorate([
             taller_module_1.TallerModule,
             estado_module_1.EstadoModule,
             color_module_1.ColorModule,
+            talle_module_1.TalleModule,
         ],
         controllers: [movimientos_stock_controller_1.MovimientosStockController],
         providers: [movimientos_stock_service_1.MovimientosStockService],

@@ -7,6 +7,7 @@ import { ArticulosModule } from '../articulos/articulos.module';
 import { TallerModule } from '../taller/taller.module';
 import { EstadoModule } from '../estado/estado.module';
 import { ColorModule } from '../color/color.module';
+import { TalleModule } from '@/talle/talle.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ColorModule } from '../color/color.module';
     TallerModule,
     EstadoModule,
     ColorModule,
+    TalleModule, // ➕ 1. Importamos el módulo del talle
   ],
   controllers: [MovimientosStockController], 
   providers: [MovimientosStockService],

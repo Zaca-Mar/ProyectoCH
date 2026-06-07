@@ -5,5 +5,5 @@ export declare class MovimientosStockController {
     constructor(movimientosStockService: MovimientosStockService);
     create(createMovimientosStockDto: CreateMovimientosStockDto): Promise<import("./entities/movimientos_stock.entity").MovimientosStock>;
     findAll(): Promise<import("./entities/movimientos_stock.entity").MovimientosStock[]>;
-    filter(idTaller: string, idEstado: string): Promise<import("./entities/movimientos_stock.entity").MovimientosStock[]>;
+    filter(idTaller: string, idEstado?: string): Promise<import("./entities/movimientos_stock.entity").MovimientosStock[]>;
 }

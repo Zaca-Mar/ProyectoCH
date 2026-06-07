@@ -4,10 +4,14 @@ import { Inicio } from './pages/home';
 import { Talleres } from './pages/Talleres'; 
 import { Articulos } from './pages/Articulos'; 
 import { Consultas } from './pages/Consultas'; 
-import {Colores} from './pages/Colores'; 
+import { Colores } from './pages/Colores'; 
+import { Localidades } from './pages/Localidades';
+import { EgresosTaller } from './pages/EgresosTaller';
+import { Login } from './pages/Login';
 
 function App() {
-  const [pantallaActual, setPantallaActual] = useState<string>('inicio');
+  // Arranca en 'login' de forma predeterminada
+  const [pantallaActual, setPantallaActual] = useState<string>('login');
 
   const renderPantalla = () => {
     switch (pantallaActual) {
@@ -29,14 +33,25 @@ function App() {
       case 'colores':
         return <Colores />; 
 
+      case 'localidades':
+        return <Localidades />;
+
+      case 'egresos-taller':
+        return <EgresosTaller />;
+
+      case 'login':
+        // 1. Le pasamos la función de navegación al Login
+        return <Login onLoginSuccess={() => setPantallaActual('inicio')} />;
+
       default:
-        return <Inicio onNavigate={setPantallaActual} />;
+        return <Login onLoginSuccess={() => setPantallaActual('inicio')} />;
     }
   };
 
   return (
     <div className="bg-light min-vh-100 pb-5">
-      {pantallaActual !== 'inicio' && (
+      {/* 2. Modificamos la condición para que NO muestre la barra ni en 'inicio' ni en 'login' */}
+      {pantallaActual !== 'inicio' && pantallaActual !== 'login' && (
         <nav className="navbar navbar-dark bg-dark px-4 py-2 mb-4 shadow-sm">
           <span 
             className="navbar-brand fw-bold text-uppercase" 

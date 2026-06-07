@@ -21,44 +21,61 @@ const articulos_service_1 = require("../articulos/articulos.service");
 const taller_service_1 = require("../taller/taller.service");
 const estado_service_1 = require("../estado/estado.service");
 const color_service_1 = require("../color/color.service");
+const talle_service_1 = require("../talle/talle.service");
 let MovimientosStockService = class MovimientosStockService {
     movimientosRepository;
     articulosService;
     tallerService;
     estadoService;
     colorService;
-    constructor(movimientosRepository, articulosService, tallerService, estadoService, colorService) {
+    talleService;
+    constructor(movimientosRepository, articulosService, tallerService, estadoService, colorService, talleService) {
         this.movimientosRepository = movimientosRepository;
         this.articulosService = articulosService;
         this.tallerService = tallerService;
         this.estadoService = estadoService;
         this.colorService = colorService;
+        this.talleService = talleService;
     }
     async create(createDto) {
         const articulo = await this.articulosService.findOne(createDto.id_articulo);
         const taller = await this.tallerService.findOne(createDto.id_taller);
         const estado = await this.estadoService.findOne(createDto.id_estado);
         const color = await this.colorService.findOne(createDto.id_color);
-        if (!articulo || !taller || !estado || !color) {
-            throw new Error('One or more required entities were not found');
+        const talle = await this.talleService.findOne(createDto.id_talle);
+        if (!articulo || !taller || !estado || !color || !talle) {
+            throw new Error('One or more required entities were not found (Check id_talle)');
         }
         const nuevoMovimiento = new movimientos_stock_entity_1.MovimientosStock();
         nuevoMovimiento.tipo_movimiento = createDto.tipo_movimiento;
         nuevoMovimiento.cantidad = createDto.cantidad;
+        nuevoMovimiento.observacion = createDto.observacion ?? '';
         nuevoMovimiento.articulo = articulo;
         nuevoMovimiento.taller = taller;
         nuevoMovimiento.estado = estado;
         nuevoMovimiento.color = color;
+        nuevoMovimiento.talle = talle;
+        nuevoMovimiento.fecha = createDto.fecha ?? '';
         return await this.movimientosRepository.save(nuevoMovimiento);
     }
     async findAll() {
         return await this.movimientosRepository.find();
     }
     async findByTallerAndEstado(idTaller, idEstado) {
+        const condicionesBusqueda = {
+            taller: { id_taller: idTaller },
+        };
+        if (idEstado !== undefined && !isNaN(idEstado)) {
+            condicionesBusqueda.estado = { id_estado: idEstado };
+        }
         return await this.movimientosRepository.find({
-            where: {
-                taller: { id_taller: idTaller },
-                estado: { id_estado: idEstado },
+            where: condicionesBusqueda,
+            relations: {
+                articulo: true,
+                color: true,
+                taller: true,
+                estado: true,
+                talle: true,
             },
         });
     }
@@ -71,6 +88,7 @@ exports.MovimientosStockService = MovimientosStockService = __decorate([
         articulos_service_1.ArticulosService,
         taller_service_1.TallerService,
         estado_service_1.EstadoService,
-        color_service_1.ColorService])
+        color_service_1.ColorService,
+        talle_service_1.TalleService])
 ], MovimientosStockService);
 //# sourceMappingURL=movimientos_stock.service.js.map

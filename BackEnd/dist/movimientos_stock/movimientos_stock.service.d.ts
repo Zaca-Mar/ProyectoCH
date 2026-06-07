@@ -5,14 +5,16 @@ import { ArticulosService } from '../articulos/articulos.service';
 import { TallerService } from '../taller/taller.service';
 import { EstadoService } from '../estado/estado.service';
 import { ColorService } from '../color/color.service';
+import { TalleService } from '../talle/talle.service';
 export declare class MovimientosStockService {
     private readonly movimientosRepository;
     private readonly articulosService;
     private readonly tallerService;
     private readonly estadoService;
     private readonly colorService;
-    constructor(movimientosRepository: Repository<MovimientosStock>, articulosService: ArticulosService, tallerService: TallerService, estadoService: EstadoService, colorService: ColorService);
+    private readonly talleService;
+    constructor(movimientosRepository: Repository<MovimientosStock>, articulosService: ArticulosService, tallerService: TallerService, estadoService: EstadoService, colorService: ColorService, talleService: TalleService);
     create(createDto: CreateMovimientosStockDto): Promise<MovimientosStock>;
     findAll(): Promise<MovimientosStock[]>;
-    findByTallerAndEstado(idTaller: number, idEstado: number): Promise<MovimientosStock[]>;
+    findByTallerAndEstado(idTaller: number, idEstado?: number): Promise<MovimientosStock[]>;
 }

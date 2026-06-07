@@ -5,4 +5,7 @@ export declare class CreateMovimientosStockDto {
     id_color: number;
     id_taller: number;
     id_estado: number;
+    id_talle: number;
+    observacion?: string;
+    fecha?: string;
 }

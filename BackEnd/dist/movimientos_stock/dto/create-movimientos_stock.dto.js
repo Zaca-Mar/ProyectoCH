@@ -18,6 +18,9 @@ class CreateMovimientosStockDto {
     id_color;
     id_taller;
     id_estado;
+    id_talle;
+    observacion;
+    fecha;
 }
 exports.CreateMovimientosStockDto = CreateMovimientosStockDto;
 __decorate([
@@ -47,4 +50,8 @@ __decorate([
     (0, class_validator_1.IsNumber)(),
     __metadata("design:type", Number)
 ], CreateMovimientosStockDto.prototype, "id_estado", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], CreateMovimientosStockDto.prototype, "id_talle", void 0);
 //# sourceMappingURL=create-movimientos_stock.dto.js.map

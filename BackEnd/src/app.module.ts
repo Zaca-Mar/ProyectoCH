@@ -10,6 +10,10 @@ import { ProvinciaModule } from './provincia/provincia.module';
 import { LocalidadModule } from './localidad/localidad.module';
 import { EstadoModule } from './estado/estado.module';
 import { MovimientosStockModule } from './movimientos_stock/movimientos_stock.module';
+import { TalleModule } from './talle/talle.module';
+import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
+
 
 @Module({
   imports: [
@@ -37,6 +41,9 @@ import { MovimientosStockModule } from './movimientos_stock/movimientos_stock.mo
   LocalidadModule,
   EstadoModule,
   MovimientosStockModule,
+  TalleModule,
+  AuthModule,
+  UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

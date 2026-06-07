@@ -5,7 +5,6 @@ const API = axios.create({
   baseURL: 'http://localhost:3001',
 });
 
-// Funciones para interactuar con los endpoints que armamos
 export const movimientosService = {
   // Traer todos los movimientos de stock
   getAll: async () => {
@@ -13,20 +12,36 @@ export const movimientosService = {
     return response.data;
   },
   
-  // Registrar un nuevo movimiento (Ingreso/Egreso)
-  create: async (data: any) => {
+  // 🔄 OPTIMIZADO: Ahora 'data' recibe el objeto individual que armamos en el bucle .map()
+  // (incluyendo id_taller, tipo_movimiento, id_articulo, id_talle, id_color, cantidad, id_estado y observacion)
+  create: async (data: {
+    id_taller: number;
+    tipo_movimiento: string;
+    id_articulo: number;
+    id_talle: number;
+    id_color: number;
+    cantidad: number;
+    id_estado: number;
+    observacion: string | null;
+    fecha: string; 
+  }) => {
     const response = await API.post('/movimientos-stock', data);
     return response.data;
   },
   
-  // Filtrar movimientos por taller y estado
-  filtrar: async (idTaller: number, idEstado: number) => {
-    const response = await API.get(`/movimientos-stock/filtrar?id_taller=${idTaller}&id_estado=${idEstado}`);
+  // 🔒 MODIFICACIÓN: idEstado ahora es opcional (?) y la URL se arma dinámicamente
+  filtrar: async (idTaller: number, idEstado?: number) => {
+    let url = `/movimientos-stock/filtrar?id_taller=${idTaller}`;
+    
+    // Si viene el estado y no es cero, lo agregamos a la consulta
+    if (idEstado !== undefined && idEstado !== 0) {
+      url += `&id_estado=${idEstado}`;
+    }
+
+    const response = await API.get(url);
     return response.data;
   }
 };
-
-// ... (Tus otros servicios como movimientosService se quedan igual)
 
 export const auxiliaresService = {
   getArticulos: async () => (await API.get('/articulos')).data,
@@ -34,9 +49,13 @@ export const auxiliaresService = {
   getTalleres: async () => (await API.get('/taller')).data,
   getEstados: async () => (await API.get('/estado')).data,
   getLocalidades: async () => (await API.get('/localidad')).data, 
+  getProvincias: async () => (await API.get('/provincia')).data,
   
+  // ➕ REVISIÓN: Aseguramos que esté el método de obtener talles que consume el formulario
+  getTalles: async () => (await API.get('/talle')).data,
+
   createArticulo: async (data: { nombre: string }) => {
-    const response = await API.post('/articulos', data); // Asegúrate de que coincida con tu ruta de NestJS
+    const response = await API.post('/articulos', data);
     return response.data;
   },
   createColor: async (data: { nombre: string }) => {
@@ -45,6 +64,10 @@ export const auxiliaresService = {
   },
   createTaller: async (data: { nombre: string; calle: string; numero: number; id_localidad: number }) => {
     const response = await API.post('/taller', data);
+    return response.data;
+  },
+  createLocalidad: async (data: { nombre: string; id_provincia: number }) => {
+    const response = await API.post('/localidad', data);
     return response.data;
   },
 };

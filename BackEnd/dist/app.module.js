@@ -19,6 +19,9 @@ const provincia_module_1 = require("./provincia/provincia.module");
 const localidad_module_1 = require("./localidad/localidad.module");
 const estado_module_1 = require("./estado/estado.module");
 const movimientos_stock_module_1 = require("./movimientos_stock/movimientos_stock.module");
+const talle_module_1 = require("./talle/talle.module");
+const auth_module_1 = require("./auth/auth.module");
+const users_module_1 = require("./users/users.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -49,6 +52,9 @@ exports.AppModule = AppModule = __decorate([
             localidad_module_1.LocalidadModule,
             estado_module_1.EstadoModule,
             movimientos_stock_module_1.MovimientosStockModule,
+            talle_module_1.TalleModule,
+            auth_module_1.AuthModule,
+            users_module_1.UsersModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],
