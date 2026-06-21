@@ -3,158 +3,350 @@ import { Container, Row, Col, Card, Form, Button, Table, Alert } from 'react-boo
 import { auxiliaresService, movimientosService } from '../services/api';
 
 export function Consultas() {
+  // Selectores para cargar las opciones del backend
   const [talleres, setTalleres] = useState<any[]>([]);
+  const [articulos, setArticulos] = useState<any[]>([]);
+  const [colores, setColores] = useState<any[]>([]);
+  const [talles, setTalles] = useState<any[]>([]);
+
+  // Estados de los filtros seleccionados por el usuario
   const [idTaller, setIdTaller] = useState('');
+  const [idArticuloFiltro, setIdArticuloFiltro] = useState('');
+  const [idColorFiltro, setIdColorFiltro] = useState('');
+  const [idTalleFiltro, setIdTalleFiltro] = useState('');
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
+
+  // Datos base descargados
   const [movimientos, setMovimientos] = useState<any[]>([]);
   const [error, setError] = useState('');
   const [busquedaRealizada, setBusquedaRealizada] = useState(false);
 
   useEffect(() => {
-    // Cargar la lista de talleres al inicio para el selector
-    auxiliaresService.getTalleres().then(data => {
-      setTalleres(data.sort((a: any, b: any) => a.nombre.localeCompare(b.nombre)));
+    Promise.all([
+      auxiliaresService.getTalleres(),
+      auxiliaresService.getArticulos(),
+      auxiliaresService.getColores(),
+      auxiliaresService.getTalles()
+    ]).then(([t, a, c, tal]) => {
+      setTalleres(t.sort((x: any, y: any) => x.nombre.localeCompare(y.nombre)));
+      setArticulos(a.sort((x: any, y: any) => x.nombre.localeCompare(y.nombre)));
+      setColores(c.sort((x: any, y: any) => x.nombre.localeCompare(y.nombre)));
+      // Ordenamos los talles para que la cabecera mantenga coherencia en la curva
+      setTalles(tal.sort((x: any, y: any) => Number(x.id_talle) - Number(y.id_talle)));
+    }).catch(() => {
+      setError('Error al cargar los selectores de filtrado avanzado.');
     });
   }, []);
 
-  const manejarBusqueda = async (e: React.FormEvent) => {
+  const manejarBusquedaPrincipal = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setBusquedaRealizada(false);
 
     if (!idTaller) {
-      setError('Por favor, selecciona un taller para realizar la consulta.');
+      setError('Por favor, selecciona un Taller para realizar la consulta.');
       return;
     }
 
     try {
-      // 🛠️ SOLUCIÓN: Usamos getAll() y filtramos en el Front-End por ID de taller.
-      // Esto evita romper tu API si todavía espera recibir obligatoriamente un id_estado.
       const todosLosMovimientos = await movimientosService.getAll();
-      
-      const filtrados = todosLosMovimientos.filter(
+      const filtradosPorTaller = todosLosMovimientos.filter(
         (m: any) => m.taller?.id_taller === Number(idTaller)
       );
-
-      setMovimientos(filtrados);
+      setMovimientos(filtradosPorTaller);
       setBusquedaRealizada(true);
     } catch (err) {
       setError('Error al obtener el historial de stock para el taller seleccionado.');
     }
   };
 
-  // 🛠️ MATEMÁTICA CORREGIDA: Suma ingresos y resta egresos
-  const totalStock = movimientos.reduce((sum, mov) => {
-    if (mov.tipo_movimiento === 'INGRESO') {
-      return sum + Number(mov.cantidad || 0);
-    } else if (mov.tipo_movimiento === 'EGRESO') {
-      return sum - Number(mov.cantidad || 0);
+  // ====================================================================
+  // 🛠️ 1. FILTRADO MULTI-CRITERIO BASE (Prendas, Colores y Talle enfocado)
+  // ====================================================================
+  const movimientosFiltradosOpciones = movimientos.filter((mov: any) => {
+    if (idArticuloFiltro && mov.articulo?.id_articulo !== Number(idArticuloFiltro)) return false;
+    if (idColorFiltro && mov.color?.id_color !== Number(idColorFiltro)) return false;
+    if (idTalleFiltro && mov.talle?.id_talle !== Number(idTalleFiltro)) return false;
+    return true;
+  });
+
+  // ====================================================================
+  // 🛠️ 2. AGRUPACIÓN CRONOLÓGICA POR REMITO (De más viejo a más nuevo)
+  // ====================================================================
+  const mapaPreAgrupado: { [key: string]: { 
+    fecha: string;
+    tipo_movimiento: string;
+    nombre_articulo: string;
+    nombre_color: string;
+    observacion: string;
+    cantidadesOperacion: { [id_talle: number]: number };
+  }} = {};
+
+  movimientosFiltradosOpciones.forEach((mov: any) => {
+    const idArt = mov.articulo?.id_articulo;
+    const idCol = mov.color?.id_color;
+    const tipo = mov.tipo_movimiento;
+    const fecha = mov.fecha || 'S/D';
+    const idTalle = mov.talle?.id_talle;
+    const cantidad = Number(mov.cantidad || 0);
+    const obs = mov.observacion || '';
+
+    if (!idArt || !idCol || !idTalle) return;
+
+    const clave = `${idArt}-${idCol}-${tipo}-${fecha}-${obs.substring(0, 30)}`;
+
+    if (!mapaPreAgrupado[clave]) {
+      mapaPreAgrupado[clave] = {
+        fecha: fecha,
+        tipo_movimiento: tipo,
+        nombre_articulo: mov.articulo.nombre,
+        nombre_color: mov.color.nombre,
+        observacion: obs,
+        cantidadesOperacion: {}
+      };
     }
-    return sum;
-  }, 0);
+
+    mapaPreAgrupado[clave].cantidadesOperacion[idTalle] = (mapaPreAgrupado[clave].cantidadesOperacion[idTalle] || 0) + cantidad;
+  });
+
+  const remitosCronologicos = Object.values(mapaPreAgrupado).sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+  // ====================================================================
+  // 🛠️ 3. CÁLCULO EXCLUSIVO DEL SALDO DINÁMICO ACUMULADO (Cuenta Corriente)
+  // ====================================================================
+  const historialConSaldos: any[] = [];
+  let saldoAcumuladoGeneral = 0;
+
+  remitosCronologicos.forEach(remito => {
+    const factor = remito.tipo_movimiento === 'INGRESO' ? 1 : -1;
+    const totalPrendasFila = Object.values(remito.cantidadesOperacion).reduce((sum, c) => sum + c, 0);
+    
+    // Balance acumulado: Ingresos suman, Retiros restan
+    saldoAcumuladoGeneral += (totalPrendasFila * factor);
+
+    historialConSaldos.push({
+      ...remito,
+      totalFilaOperacion: totalPrendasFila,
+      totalSaldoAcumulado: saldoAcumuladoGeneral
+    });
+  });
+
+  // ====================================================================
+  // 🛠️ 4. FILTRADO VISUAL FINAL POR RANGO DE FECHAS
+  // ====================================================================
+  const datosVisiblesTabla = historialConSaldos.filter(item => {
+    if (fechaDesde && item.fecha < fechaDesde) return false;
+    if (fechaHasta && item.fecha > fechaHasta) return false;
+    return true;
+  });
+
+  // El indicador superior muestra la foto real de la deuda arrastrada en la fecha límite filtrada
+  const granTotalNeto = datosVisiblesTabla.length > 0 
+    ? datosVisiblesTabla[datosVisiblesTabla.length - 1].totalSaldoAcumulado 
+    : 0;
+
+  // Invertimos el orden para que lo más nuevo figure arriba de todo en la grilla visual
+  const datosRenderizados = [...datosVisiblesTabla].reverse();
+
+  const limpiarFiltrosAvanzados = () => {
+    setIdArticuloFiltro('');
+    setIdColorFiltro('');
+    setIdTalleFiltro('');
+    setFechaDesde('');
+    setFechaHasta('');
+  };
 
   return (
-    <Container className="mt-4">
+    <Container fluid className="mt-4 mb-5 px-4">
       <h2 className="mb-4 text-center text-uppercase fw-bold">Consulta de Stock por Taller</h2>
-      
       {error && <Alert variant="danger">{error}</Alert>}
 
-      {/* FILTROS DE BÚSQUEDA */}
-      <Card className="shadow-sm mb-4 border-dark">
-        <Card.Header className="bg-dark text-white fw-bold text-uppercase">
-          Filtros de Búsqueda
-        </Card.Header>
+      {/* BLOQUE FILTRO PRINCIPAL */}
+      <Card className="shadow-sm mb-3 border-dark">
+        <Card.Header className="bg-dark text-white fw-bold text-uppercase">Taller a Consultar</Card.Header>
         <Card.Body>
-          <Form onSubmit={manejarBusqueda}>
+          <Form onSubmit={manejarBusquedaPrincipal}>
             <Row className="align-items-end">
-              <Col md={8} className="mb-2">
+              <Col md={9} className="mb-2">
                 <Form.Group>
-                  <Form.Label className="fw-semibold">Seleccionar Taller</Form.Label>
-                  <Form.Select 
-                    value={idTaller} 
-                    onChange={(e) => setIdTaller(e.target.value)}
-                    required
-                  >
+                  <Form.Label className="fw-bold">Seleccionar Taller</Form.Label>
+                  <Form.Select value={idTaller} onChange={(e) => { setIdTaller(e.target.value); setBusquedaRealizada(false); }} required>
                     <option value="">Selecciona el taller a consultar...</option>
-                    {talleres.map(t => (
-                      <option key={t.id_taller} value={t.id_taller}>{t.nombre}</option>
-                    ))}
+                    {talleres.map(t => <option key={t.id_taller} value={t.id_taller}>{t.nombre}</option>)}
                   </Form.Select>
                 </Form.Group>
               </Col>
-              <Col md={4} className="mb-2">
-                <Button variant="dark" type="submit" className="w-100 fw-bold py-2">
-                  🔍 Buscar Stock
-                </Button>
+              <Col md={3} className="mb-2">
+                <Button variant="dark" type="submit" className="w-100 fw-bold py-2">Consultar</Button>
               </Col>
             </Row>
           </Form>
         </Card.Body>
       </Card>
 
-      {/* RESULTADOS DE LA TABLA */}
+      {/* BLOQUE FILTROS AVANZADOS DINÁMICOS */}
+      {busquedaRealizada && (
+        <Card className="shadow-sm mb-4 border-secondary bg-light">
+          <Card.Header className="bg-secondary text-white fw-semibold text-uppercase d-flex justify-content-between align-items-center py-2">
+            <span>Selección de Filtros</span>
+            <Button variant="link" className="text-white p-0 text-decoration-none fw-bold" style={{ fontSize: '0.85rem' }} onClick={limpiarFiltrosAvanzados}>
+              Limpiar Filtros
+            </Button>
+          </Card.Header>
+          <Card.Body className="py-2">
+            <Row className="g-2">
+              <Col md={3} sm={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold small">Prenda / Artículo</Form.Label>
+                  <Form.Select value={idArticuloFiltro} onChange={(e) => setIdArticuloFiltro(e.target.value)}>
+                    <option value="">Todos los artículos...</option>
+                    {articulos.map(a => <option key={a.id_articulo} value={a.id_articulo}>{a.nombre}</option>)}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+              <Col md={2} sm={6}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold small">Color</Form.Label>
+                  <Form.Select value={idColorFiltro} onChange={(e) => setIdColorFiltro(e.target.value)}>
+                    <option value="">Todos...</option>
+                    {colores.map(c => <option key={c.id_color} value={c.id_color}>{c.nombre}</option>)}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+              <Col md={3} sm={4}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold small">Talle</Form.Label>
+                  <Form.Select value={idTalleFiltro} onChange={(e) => setIdTalleFiltro(e.target.value)}>
+                    <option value="">Todos los talles...</option>
+                    {talles.map(t => <option key={t.id_talle} value={t.id_talle}>{t.nombre}</option>)}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+              <Col md={2} sm={4}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold small">Desde Fecha</Form.Label>
+                  <Form.Control type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} />
+                </Form.Group>
+              </Col>
+              <Col md={2} sm={4}>
+                <Form.Group>
+                  <Form.Label className="fw-semibold small">Hasta Fecha </Form.Label>
+                  <Form.Control type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} />
+                </Form.Group>
+              </Col>
+            </Row>
+          </Card.Body>
+        </Card>
+      )}
+
+      {/* PLANILLA DE CONTROL FINAL */}
       <Card className="shadow-sm">
-        <Card.Header className="bg-secondary text-white fw-bold text-uppercase d-flex justify-content-between align-items-center">
-          <span>Resultados del Stock en Taller</span>
-          {busquedaRealizada && movimientos.length > 0 && (
+        <Card.Header className="bg-dark text-white fw-bold text-uppercase d-flex justify-content-between align-items-center">
+          <span>Planilla de Control Taller</span>
+          {busquedaRealizada && (
             <span className="badge bg-light text-dark fs-6 text-uppercase fw-bold">
-              Total Neto: {totalStock} Unidades
+              {granTotalNeto >= 0 ? 'DEUDA' : 'SALDO A FAVOR'}: {Math.abs(granTotalNeto)} UNIDADES
             </span>
           )}
         </Card.Header>
-        <Card.Body className="p-0">
-          <Table striped bordered hover responsive className="mb-0 text-center align-middle">
-            <thead className="table-dark">
+        <Card.Body className="p-0" style={{ overflowX: 'auto' }}>
+          <Table striped bordered hover responsive className="mb-0 text-center align-middle table-sm">
+            <thead className="table-secondary border-dark">
               <tr>
-                <th>ID</th>
-                <th>Fecha</th> {/* ➕ Agregada columna de fecha */}
-                <th>Artículo / Prenda</th>
-                <th>Talle</th> {/* ➕ Agregada columna de talle */}
-                <th>Color</th>
-                <th>Tipo</th>
-                <th>Cantidad</th>
+                <th rowSpan={2} className="align-middle" style={{ minWidth: '95px' }}>Fecha</th>
+                <th rowSpan={2} className="align-middle" style={{ minWidth: '90px' }}>Operación</th>
+                <th rowSpan={2} className="align-middle" style={{ minWidth: '180px' }}>Descripción / Artículo</th>
+                <th rowSpan={2} className="align-middle" style={{ minWidth: '110px' }}>Color</th>
+                <th colSpan={talles.length} className="bg-dark text-white py-1 text-uppercase small"> Talles </th>
+                <th rowSpan={2} className="align-middle bg-dark text-white" style={{ minWidth: '70px' }}>Cant.</th>
+                <th rowSpan={2} className="align-middle table-active text-dark" style={{ minWidth: '110px' }}>Saldo Deuda</th>
+              </tr>
+              <tr className="bg-light">
+                {talles.map(t => (
+                  <th key={t.id_talle} style={{ minWidth: '50px', fontSize: '0.85rem' }} className="fw-bold text-uppercase">
+                    {t.nombre}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {movimientos.length === 0 ? (
+              {datosRenderizados.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-muted py-4 fs-6">
-                    {busquedaRealizada 
-                      ? 'No se encontraron registros para el taller seleccionado.' 
-                      : 'Selecciona un taller arriba y haz clic en "Buscar Stock".'
-                    }
+                  <td colSpan={6 + talles.length} className="text-muted py-4 fs-6">
+                    {busquedaRealizada ? 'No se encontraron registros activos.' : 'Selecciona un taller arriba y haz clic en Consultar.'}
                   </td>
                 </tr>
               ) : (
-                movimientos.map((mov) => (
-                  <tr key={mov.id_movimiento}>
-                    <td>{mov.id_movimiento}</td>
-                    {/* Formatea la fecha de YYYY-MM-DD a DD/MM/YYYY visual */}
-                    <td className="fw-semibold">
-                      {mov.fecha ? mov.fecha.split('-').reverse().join('/') : 'S/D'}
-                    </td>
-                    <td className="fw-bold text-uppercase text-start ps-3">{mov.articulo?.nombre}</td>
-                    <td><span className="badge bg-dark px-2 py-1">{mov.talle?.nombre || 'N/A'}</span></td>
-                    <td className="text-uppercase">{mov.color?.nombre}</td>
-                    <td>
-                      <span className={`badge ${mov.tipo_movimiento === 'INGRESO' ? 'bg-success' : 'bg-danger'}`}>
-                        {mov.tipo_movimiento === 'INGRESO' ? 'INGRESO' : 'EGRESO'}
-                      </span>
-                    </td>
-                    <td className="fw-bold fs-6">{mov.cantidad}</td>
-                  </tr>
-                ))
+                datosRenderizados.map((item: any, index) => {
+                  const esIngreso = item.tipo_movimiento === 'INGRESO';
+
+                  // Estructuración del texto explicativo de la Cuenta Corriente
+                  let textoSaldo = '';
+                  let claseColorSaldo = 'text-secondary';
+
+                  if (item.totalSaldoAcumulado > 0) {
+                    textoSaldo = `Debe ${item.totalSaldoAcumulado}`;
+                    claseColorSaldo = 'text-primary fw-bold'; 
+                  } else if (item.totalSaldoAcumulado < 0) {
+                    textoSaldo = `A Favor ${Math.abs(item.totalSaldoAcumulado)}`;
+                    claseColorSaldo = 'text-danger fw-bold'; 
+                  } else {
+                    textoSaldo = 'Al día';
+                    claseColorSaldo = 'text-success fw-semibold'; 
+                  }
+
+                  return (
+                    <tr key={index}>
+                      <td className="small text-muted fw-semibold">
+                        {item.fecha !== 'S/D' ? item.fecha.split('-').reverse().join('/') : 'S/D'}
+                      </td>
+                      <td>
+                        <span className={`badge ${esIngreso ? 'bg-success' : 'bg-danger'} px-2 py-1 text-uppercase fw-bold`} style={{ fontSize: '0.75rem' }}>
+                          {esIngreso ? 'ENTRADA' : 'RETIRO'}
+                        </span>
+                      </td>
+                      <td className="fw-bold text-uppercase text-start ps-2" style={{ fontSize: '0.9rem' }}>
+                        {item.nombre_articulo}
+                        {item.observacion && (
+                          <span className="text-muted d-block small fw-normal text-lowercase mt-0.5">
+                            📝 {item.observacion}
+                          </span>
+                        )}
+                      </td>
+                      <td className="text-uppercase small fw-semibold text-secondary">{item.nombre_color}</td>
+                      
+                      {/* 🚀 RENDEREADO DE NÚMEROS LIMPIOS (SIN SIGNOS + NI -) */}
+                      {talles.map(t => {
+                        const cantNativa = item.cantidadesOperacion[t.id_talle];
+                        return (
+                          <td 
+                            key={t.id_talle} 
+                            className={`fw-bold ${cantNativa ? 'table-warning border-dark' : ''}`}
+                            style={{ 
+                              fontSize: '0.95rem',
+                              color: cantNativa ? (esIngreso ? '#198754' : '#dc3545') : '#bcbcbc'
+                            }}
+                          >
+                            {cantNativa !== undefined ? cantNativa : '-'}
+                          </td>
+                        );
+                      })}
+
+                      {/* Cantidad total neta del remito de la fila */}
+                      <td className="fw-bold fs-6 bg-light text-muted">
+                        {item.totalFilaOperacion}
+                      </td>
+
+                      {/* 🎯 SALDO EXPLICITADO EN PALABRAS */}
+                      <td className={`fs-6 table-active text-nowrap ${claseColorSaldo}`}>
+                        {textoSaldo}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
-            {movimientos.length > 0 && (
-              <tfoot>
-                <tr className="table-light fw-bold fs-5">
-                  <td colSpan={6} className="text-end text-uppercase">Suma Total del Reporte:</td>
-                  <td className={totalStock < 0 ? 'text-danger' : 'text-success'}>
-                    {totalStock}
-                  </td>
-                </tr>
-              </tfoot>
-            )}
           </Table>
         </Card.Body>
       </Card>

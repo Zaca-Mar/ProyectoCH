@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { loginService } from '../services/auth-service';
+// 🧵 Importamos la imagen desde la ruta que me pasaste
+import fondoTelas from '../../img/muestras-tela.jpg'; 
 
-// Definimos los tipos de los props que recibe este componente
 interface LoginProps {
   onLoginSuccess: () => void;
 }
@@ -17,13 +18,8 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
 
     try {
       await loginService(username, password);
-      
-      // En vez de recargar la página, le avisamos a App.tsx 
-      // que cambie el estado a 'inicio'
       onLoginSuccess();
-      
     } catch (err: any) {
-      // Capturamos el error del BackEnd
       if (err.response && err.response.status === 401) {
         setError('Usuario o contraseña incorrectos.');
       } else {
@@ -33,34 +29,92 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
   };
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'sans-serif' }}>
-      <form onSubmit={handleSubmit} style={{ border: '1px solid #ccc', padding: '30px', borderRadius: '8px', display: 'flex', flexDirection: 'column', width: '300px', backgroundColor: '#fff' }}>
-        <h2 style={{ marginTop: 0, marginBottom: '20px', textAlign: 'center' }}>Iniciar Sesión</h2>
+    <div style={{ display: 'flex', height: '100vh', width: '100vw', fontFamily: 'sans-serif', backgroundColor: '#f8f9fa', overflow: 'hidden' }}>
+      
+      {/* 📸 MITAD IZQUIERDA: Bloque de la Imagen de la IA (Se oculta en celulares para que no rompa) */}
+      <div style={{
+        flex: 1,
+        backgroundImage: `url(${fondoTelas})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        display: window.innerWidth < 768 ? 'none' : 'flex', // Responsivo básico por JS
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        boxShadow: 'inset -15px 0px 30px rgba(0,0,0,0.05)'
+      }}>
+        {/* Capa sutil arriba de la foto para darle un toque premium y leer el texto */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255,255,255,0.05)' }}></div>
         
-        {error && <p style={{ color: 'red', fontSize: '14px', margin: '0 0 16px 0', textAlign: 'center' }}>{error}</p>}
+        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', color: '#1a1a1a', padding: '20px' }}>
+          <h1 style={{ fontSize: '3.5rem', fontWeight: 900, margin: 0, letterSpacing: '8px', textTransform: 'uppercase' }}>
+            STOCK 
+          </h1>
+          <p style={{ fontSize: '1rem', textTransform: 'uppercase', color: '#141516', letterSpacing: '3px', marginTop: '10px', fontWeight: 600 }}>
+            Control de Stock & Talleres
+          </p>
+          <div style={{ height: '2px', width: '50px', backgroundColor: '#1a1a1a', margin: '20px auto 0 auto' }}></div>
+        </div>
+      </div>
 
-        <label style={{ marginBottom: '8px', fontWeight: 'bold' }}>Usuario</label>
-        <input 
-          type="text" 
-          value={username} 
-          onChange={(e) => setUsername(e.target.value)} 
-          required 
-          style={{ padding: '8px', marginBottom: '16px', borderRadius: '4px', border: '1px solid #ccc' }}
-        />
+      {/* 🔒 MITAD DERECHA: Formulario de Login */}
+      <div style={{
+        flex: window.innerWidth < 768 ? '1' : '0 0 450px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#fff',
+        padding: '40px'
+      }}>
+        <div style={{ width: '100%', maxWidth: '320px' }}>
+          
+          <div style={{ marginBottom: '30px' }}>
+            <h2 style={{ marginTop: 0, marginBottom: '8px', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '1.6rem', letterSpacing: '1px' }}>
+              Iniciar Sesión
+            </h2>
+            <p style={{ color: '#6c757d', fontSize: '14px', margin: 0 }}>
+              Ingresá al panel de gestión física de la marca.
+            </p>
+          </div>
+          
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column' }}>
+            {error && <p style={{ color: '#dc3545', fontSize: '14px', margin: '0 0 16px 0', fontWeight: '600' }}>{error}</p>}
 
-        <label style={{ marginBottom: '8px', fontWeight: 'bold' }}>Contraseña</label>
-        <input 
-          type="password" 
-          value={password} 
-          onChange={(e) => setPassword(e.target.value)} 
-          required 
-          style={{ padding: '8px', marginBottom: '24px', borderRadius: '4px', border: '1px solid #ccc' }}
-        />
+            <label style={{ marginBottom: '6px', fontSize: '13px', fontWeight: 'bold', color: '#495057', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Usuario
+            </label>
+            <input 
+              type="text" 
+              value={username} 
+              onChange={(e) => setUsername(e.target.value)} 
+              required 
+              placeholder="Ej: admin"
+              style={{ padding: '10px', marginBottom: '16px', borderRadius: '6px', border: '1px solid #ced4da', fontSize: '14px', outline: 'none' }}
+            />
 
-        <button type="submit" style={{ padding: '10px', backgroundColor: '#212529', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
-          Ingresar
-        </button>
-      </form>
+            <label style={{ marginBottom: '6px', fontSize: '13px', fontWeight: 'bold', color: '#495057', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Contraseña
+            </label>
+            <input 
+              type="password" 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+              required 
+              placeholder="••••••••"
+              style={{ padding: '10px', marginBottom: '24px', borderRadius: '6px', border: '1px solid #ced4da', fontSize: '14px', outline: 'none' }}
+            />
+
+            <button type="submit" style={{ padding: '12px', backgroundColor: '#1a1a1a', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '14px', transition: 'background-color 0.2s' }}>
+              Ingresar
+            </button>
+          </form>
+
+          <p style={{ textAlign: 'center', color: '#adb5bd', fontSize: '11px', marginTop: '50px', marginBottom: 0 }}>
+            &copy; {new Date().getFullYear()} JJJACOBO E HIJOS SA. Todos los derechos reservados.
+          </p>
+        </div>
+      </div>
+
     </div>
   );
 };

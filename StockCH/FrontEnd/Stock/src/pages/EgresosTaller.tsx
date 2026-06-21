@@ -2,28 +2,17 @@ import { useEffect, useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Table, Alert, Modal } from 'react-bootstrap';
 import { auxiliaresService, movimientosService } from '../services/api';
 
-interface PrendaPendiente {
-  id_articulo: number;
-  nombre_articulo: string;
-  id_talle: number;
-  nombre_talle: string;
-  id_color: number;
-  nombre_color: string;
-  pendiente: number;
-}
-
 export function EgresosTaller() {
   const [talleres, setTalleres] = useState<any[]>([]);
   const [idTaller, setIdTaller] = useState('');
-  const [pendientes, setPendientes] = useState<PrendaPendiente[]>([]);
+  const [pendientesAgrupados, setPendientesAgrupados] = useState<any[]>([]);
   
-  // Estado para el modal de descarga
   const [showModal, setShowModal] = useState(false);
-  const [prendaSeleccionada, setPrendaSeleccionada] = useState<PrendaPendiente | null>(null);
-  const [cantidadRetiro, setCantidadRetiro] = useState('');
-  const [observacion, setObservacion] = useState('');
+  const [modeloSeleccionado, setModeloSeleccionado] = useState<any | null>(null);
   
-  // ➕ NUEVO: Estado para manejar la fecha específica de este egreso/retiro parcial
+  // Guardará los retiros ingresados en el modal por cada ID de talle: { [id_talle]: cantidad }
+  const [cantidadesRetiro, setCantidadesRetiro] = useState<{ [key: string]: string }>({});
+  const [observacion, setObservacion] = useState('');
   const [fechaEgreso, setFechaEgreso] = useState(new Date().toISOString().split('T')[0]);
 
   const [error, setError] = useState('');
@@ -35,12 +24,11 @@ export function EgresosTaller() {
     });
   }, []);
 
-  // Cada vez que cambia el taller, calculamos su stock pendiente
   useEffect(() => {
     if (idTaller) {
       cargarStockPendiente(Number(idTaller));
     } else {
-      setPendientes([]);
+      setPendientesAgrupados([]);
     }
   }, [idTaller]);
 
@@ -50,120 +38,142 @@ export function EgresosTaller() {
       const todosLosMovimientos = await movimientosService.getAll();
       const movimientosDelTaller = todosLosMovimientos.filter((m: any) => m.taller?.id_taller === tallerId);
 
-      const mapaSaldos: { [key: string]: { info: any; ingresos: number; egresos: number } } = {};
+      // Mapa indexado por: id_articulo-id_color
+      const mapa: { [key: string]: {
+        id_articulo: number;
+        nombre_articulo: string;
+        id_color: number;
+        nombre_color: string;
+        curva: { [id_talle: string]: { nombre: string; pendiente: number } };
+      }} = {};
 
       movimientosDelTaller.forEach((m: any) => {
-        const clave = `${m.articulo?.id_articulo}-${m.talle?.id_talle}-${m.color?.id_color}`;
-        
-        if (!mapaSaldos[clave]) {
-          mapaSaldos[clave] = {
-            info: m,
-            ingresos: 0,
-            egresos: 0
+        const idArt = m.articulo?.id_articulo;
+        const idCol = m.color?.id_color;
+        const idTal = m.talle?.id_talle;
+        if (!idArt || !idCol || !idTal) return;
+
+        const clave = `${idArt}-${idCol}`;
+        if (!mapa[clave]) {
+          mapa[clave] = {
+            id_articulo: idArt,
+            nombre_articulo: m.articulo.nombre,
+            id_color: idCol,
+            nombre_color: m.color.nombre,
+            curva: {}
           };
         }
 
+        if (!mapa[clave].curva[idTal]) {
+          mapa[clave].curva[idTal] = { nombre: m.talle.nombre, pendiente: 0 };
+        }
+
+        const cantidad = Number(m.cantidad || 0);
         if (m.tipo_movimiento === 'INGRESO') {
-          mapaSaldos[clave].ingresos += Number(m.cantidad || 0);
+          mapa[clave].curva[idTal].pendiente += cantidad;
         } else if (m.tipo_movimiento === 'EGRESO') {
-          mapaSaldos[clave].egresos += Number(m.cantidad || 0);
+          mapa[clave].curva[idTal].pendiente -= cantidad;
         }
       });
 
-      const listaPendientes: PrendaPendiente[] = [];
-      Object.keys(mapaSaldos).forEach(clave => {
-        const item = mapaSaldos[clave];
-        const saldoPendiente = item.ingresos - item.egresos;
+      // Filtrar únicamente los modelos que retengan deuda real en algún talle
+      const listaFinal: any[] = [];
+      Object.values(mapa).forEach(item => {
+        const curvaConDeuda: any = {};
+        let tieneDeuda = false;
 
-        if (saldoPendiente > 0) {
-          listaPendientes.push({
-            id_articulo: item.info.articulo?.id_articulo,
-            nombre_articulo: item.info.articulo?.nombre || 'Desconocido',
-            id_talle: item.info.talle?.id_talle,
-            nombre_talle: item.info.talle?.nombre || 'N/A',
-            id_color: item.info.color?.id_color,
-            nombre_color: item.info.color?.nombre || 'N/A',
-            pendiente: saldoPendiente
-          });
+        Object.entries(item.curva).forEach(([idTal, data]: any) => {
+          if (data.pendiente > 0) {
+            curvaConDeuda[idTal] = data;
+            tieneDeuda = true;
+          }
+        });
+
+        if (tieneDeuda) {
+          listaFinal.push({ ...item, curva: curvaConDeuda });
         }
       });
 
-      setPendientes(listaPendientes.sort((a, b) => a.nombre_articulo.localeCompare(b.nombre_articulo)));
+      setPendientesAgrupados(listaFinal.sort((a, b) => a.nombre_articulo.localeCompare(b.nombre_articulo)));
     } catch (err) {
-      setError('Error al calcular las prendas pendientes del taller.');
+      setError('Error al calcular las prendas agrupadas del taller.');
     }
   };
 
-  const handleAbrirRetiro = (prenda: PrendaPendiente) => {
-    setPrendaSeleccionada(prenda);
-    setCantidadRetiro('');
+  const handleAbrirRetiro = (modelo: any) => {
+    setModeloSeleccionado(modelo);
+    setCantidadesRetiro({});
     setObservacion('');
-    // ➕ Reseteamos la fecha al día de hoy cada vez que se abre un artículo distinto
     setFechaEgreso(new Date().toISOString().split('T')[0]); 
     setSuccess(false);
     setError('');
     setShowModal(true);
   };
 
-  const handleGuardarRetiro = async () => {
-    if (!prendaSeleccionada || !cantidadRetiro || Number(cantidadRetiro) <= 0) {
-      setError('Por favor, ingresa una cantidad válida de retiro.');
+  const handleCantidadModalChange = (idTalle: string, valor: string) => {
+    setCantidadesRetiro(prev => ({ ...prev, [idTalle]: valor }));
+  };
+
+  const handleGuardarRetiroMasivo = async () => {
+    setError('');
+    
+    const retirosValidos = Object.entries(cantidadesRetiro)
+      .map(([idTalle, cant]) => ({ idTalle: Number(idTalle), cantidad: Number(cant) }))
+      .filter(r => !isNaN(r.cantidad) && r.cantidad > 0);
+
+    if (retirosValidos.length === 0) {
+      setError('Por favor, ingresa una cantidad válida en al menos un talle.');
       return;
     }
 
-    if (Number(cantidadRetiro) > prendaSeleccionada.pendiente) {
-      setError(`No puedes retirar más de lo que el taller debe (${prendaSeleccionada.pendiente} unidades).`);
-      return;
-    }
-
-    if (!fechaEgreso) {
-      setError('Por favor, selecciona una fecha válida para el egreso.');
-      return;
+    // Validar topes máximos de deuda por talle
+    for (const r of retirosValidos) {
+      const talleDeuda = modeloSeleccionado.curva[r.idTalle]?.pendiente || 0;
+      if (r.cantidad > talleDeuda) {
+        setError(`No puedes retirar más de lo debido en el talle ${modeloSeleccionado.curva[r.idTalle].nombre}.`);
+        return;
+      }
     }
 
     try {
-      // Registramos el egreso mandando la fecha seleccionada en el modal
-      const nuevoMovimiento: any = {
-        id_taller: Number(idTaller),
-        tipo_movimiento: 'EGRESO',
-        id_articulo: prendaSeleccionada.id_articulo,
-        id_talle: prendaSeleccionada.id_talle,
-        id_color: prendaSeleccionada.id_color,
-        cantidad: Number(cantidadRetiro),
-        id_estado: 1,
-        observacion: observacion.trim() ? `Retiro controlado: ${observacion}` : 'Retiro parcial de taller',
-        fecha: fechaEgreso // ➕ Enviamos la fecha específica de esta fila a NestJS
-      };
+      const solicitudes = retirosValidos.map(r => {
+        return movimientosService.create({
+          id_taller: Number(idTaller),
+          tipo_movimiento: 'EGRESO',
+          id_articulo: modeloSeleccionado.id_articulo,
+          id_color: modeloSeleccionado.id_color,
+          id_talle: r.idTalle,
+          cantidad: r.cantidad,
+          id_estado: 1,
+          observacion: observacion.trim(),
+          fecha: fechaEgreso
+        } as any);
+      });
 
-      await movimientosService.create(nuevoMovimiento);
-
+      await Promise.all(solicitudes);
       setSuccess(true);
       setShowModal(false);
-      cargarStockPendiente(Number(idTaller)); // Recalcula la deuda automáticamente
+      cargarStockPendiente(Number(idTaller));
     } catch (err) {
-      setError('Error al procesar la salida de mercadería en el servidor.');
+      setError('Error al procesar el lote de egresos en el servidor.');
     }
   };
 
   return (
     <Container className="mt-4">
-      <h2 className="mb-4 text-center text-uppercase fw-bold">Egresos Controlados (Descarga de Taller)</h2>
-      
+      <h2 className="mb-4 text-center text-uppercase fw-bold">Egresos de Taller</h2>
       {error && <Alert variant="danger">{error}</Alert>}
-      {success && <Alert variant="success">¡Egreso registrado y saldo actualizado con éxito!</Alert>}
+      {success && <Alert variant="success">¡Egresos registrados y saldos actualizados!</Alert>}
 
-      {/* Selector de Taller */}
       <Row className="mb-4">
         <Col md={6} className="mx-auto">
           <Card className="shadow-sm border-dark">
             <Card.Body>
               <Form.Group>
-                <Form.Label className="fw-bold text-uppercase">Seleccionar Taller a Auditar</Form.Label>
+                <Form.Label className="fw-bold text-uppercase">Seleccionar Taller</Form.Label>
                 <Form.Select value={idTaller} onChange={(e) => setIdTaller(e.target.value)}>
                   <option value="">Selecciona el taller para ver qué debe...</option>
-                  {talleres.map(t => (
-                    <option key={t.id_taller} value={t.id_taller}>{t.nombre}</option>
-                  ))}
+                  {talleres.map(t => <option key={t.id_taller} value={t.id_taller}>{t.nombre}</option>)}
                 </Form.Select>
               </Form.Group>
             </Card.Body>
@@ -171,43 +181,43 @@ export function EgresosTaller() {
         </Col>
       </Row>
 
-      {/* Tabla de Deuda Pendiente */}
       {idTaller && (
         <Row>
           <Col md={12}>
             <Card className="shadow-sm">
-              <Card.Header className="bg-dark text-white fw-bold text-uppercase">
-                Mercadería Pendiente de Entrega en este Taller
-              </Card.Header>
+              <Card.Header className="bg-dark text-white fw-bold text-uppercase">Mercadería Pendiente de Entrega</Card.Header>
               <Card.Body className="p-0">
                 <Table striped bordered hover responsive className="mb-0 text-center align-middle">
                   <thead className="table-secondary">
                     <tr>
                       <th>Artículo / Prenda</th>
-                      <th>Talle</th>
                       <th>Color</th>
-                      <th>Cantidad en Taller (Deuda)</th>
+                      <th>En Taller </th>
                       <th>Acción</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {pendientes.length === 0 ? (
+                    {pendientesAgrupados.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="text-muted py-4 fs-6">
-                          🎉 ¡Al día! Este taller no tiene mercadería pendiente de entrega.
-                        </td>
+                        <td colSpan={4} className="text-muted py-4 fs-6">🎉 ¡Al día! Sin deudas pendientes.</td>
                       </tr>
                     ) : (
-                      pendientes.map((item, index) => (
+                      pendientesAgrupados.map((item, index) => (
                         <tr key={index}>
                           <td className="fw-bold text-uppercase text-start ps-4">{item.nombre_articulo}</td>
-                          <td><span className="badge bg-dark px-2 py-1">{item.nombre_talle}</span></td>
                           <td className="text-uppercase">{item.nombre_color}</td>
-                          <td className="fw-bold text-danger fs-5">{item.pendiente}</td>
                           <td>
-                            <Button variant="outline-success" size="sm" className="fw-bold" onClick={() => handleAbrirRetiro(item)}>
-                              ⬇️ Registrar Entrega
-                            </Button>
+                            <div className="d-flex flex-wrap gap-2 justify-content-center">
+                              {Object.values(item.curva).map((tData: any, i) => (
+                                <span key={i} className="badge bg-light text-dark border border-secondary p-2 fs-6">
+                                  <strong className="bg-dark text-white px-1.5 py-0.5 rounded me-1">{tData.nombre}</strong>
+                                  <span className="text-danger fw-bold">({tData.pendiente})</span>
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td>
+                            <Button variant="outline-success" size="sm" className="fw-bold" onClick={() => handleAbrirRetiro(item)}>⬇️ Registrar Entrega</Button>
                           </td>
                         </tr>
                       ))
@@ -220,58 +230,48 @@ export function EgresosTaller() {
         </Row>
       )}
 
-      {/* MODAL POPUP PARA DESCARGAR CANTIDADES Y FECHAS */}
-      <Modal show={showModal} onHide={() => setShowModal(false)} centered>
+      {/* MODAL MULTI-INPUT POR CURVA */}
+      <Modal show={showModal} onHide={() => setShowModal(false)} centered size="lg">
         <Modal.Header className="bg-dark text-white" closeButton>
-          <Modal.Title className="fs-5 fw-bold text-uppercase">Registrar Devolución de Prenda</Modal.Title>
+          <Modal.Title className="fs-5 fw-bold text-uppercase">Registrar Retiro de Prendas</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {prendaSeleccionada && (
-            <div className="mb-3">
-              <p className="mb-1"><strong>Artículo:</strong> <span className="text-uppercase">{prendaSeleccionada.nombre_articulo}</span></p>
-              <p className="mb-1"><strong>Variante:</strong> Talle {prendaSeleccionada.nombre_talle} | Color {prendaSeleccionada.nombre_color}</p>
-              <p className="text-danger"><strong>Cantidad Máxima que deben:</strong> {prendaSeleccionada.pendiente} unidades.</p>
+          {modeloSeleccionado && (
+            <div>
+              <h5>Prenda: <span className="text-uppercase fw-bold text-primary">{modeloSeleccionado.nombre_articulo}</span> | Color: <span className="text-uppercase fw-bold text-primary">{modeloSeleccionado.nombre_color}</span></h5>
               <hr />
+              <Row className="mb-3">
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="fw-semibold">Fecha de Egreso / Retiro</Form.Label>
+                    <Form.Control type="date" value={fechaEgreso} onChange={(e) => setFechaEgreso(e.target.value)} required />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label className="fw-semibold">Nota / Observación</Form.Label>
+                    <Form.Control type="text" value={observacion} onChange={(e) => setObservacion(e.target.value)} placeholder="Ej: Chofer Juan" />
+                  </Form.Group>
+                </Col>
+              </Row>
               
-              {/* ➕ NUEVO: Campo para definir la fecha exacta en la que se retira este artículo */}
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold">Fecha de Egreso / Retiro</Form.Label>
-                <Form.Control 
-                  type="date" 
-                  value={fechaEgreso} 
-                  onChange={(e) => setFechaEgreso(e.target.value)}
-                  required
-                />
-              </Form.Group>
-
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold">¿Cuántas unidades te está entregando el taller hoy?</Form.Label>
-                <Form.Control 
-                  type="number" 
-                  value={cantidadRetiro} 
-                  onChange={(e) => setCantidadRetiro(e.target.value)}
-                  placeholder={`Máximo ${prendaSeleccionada.pendiente}`}
-                  max={prendaSeleccionada.pendiente}
-                  min="1"
-                  required
-                />
-              </Form.Group>
-
-              <Form.Group>
-                <Form.Label className="fw-semibold">Nota u Observación (Opcional)</Form.Label>
-                <Form.Control 
-                  type="text" 
-                  value={observacion} 
-                  onChange={(e) => setObservacion(e.target.value)}
-                  placeholder="Ej: Entrega parcial de remeras terminadas"
-                />
-              </Form.Group>
+              <Form.Label className="fw-bold text-uppercase text-muted mb-2">Cantidades a descargar por talle:</Form.Label>
+              <Row className="g-2">
+                {Object.entries(modeloSeleccionado.curva).map(([idTalle, tData]: any) => (
+                  <Col sm={4} md={3} key={idTalle}>
+                    <Card className="p-2 text-center bg-light">
+                      <Form.Label className="fw-bold mb-1">Talle {tData.nombre} <span className="text-muted text-danger">({tData.pendiente})</span></Form.Label>
+                      <Form.Control type="number" min="0" max={tData.pendiente} placeholder="0" className="text-center fw-bold" value={cantidadesRetiro[idTalle] || ''} onChange={(e) => handleCantidadModalChange(idTalle, e.target.value)} />
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
             </div>
           )}
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowModal(false)}>Cancelar</Button>
-          <Button variant="success" className="fw-bold" onClick={handleGuardarRetiro}>Confirmar Egreso</Button>
+          <Button variant="success" className="fw-bold" onClick={handleGuardarRetiroMasivo}>Confirmar Salida</Button>
         </Modal.Footer>
       </Modal>
     </Container>

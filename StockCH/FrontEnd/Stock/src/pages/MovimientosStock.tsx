@@ -21,15 +21,11 @@ export function MovimientosStock() {
   const [idTaller, setIdTaller] = useState('');
   const [tipoMovimiento, setTipoMovimiento] = useState('INGRESO');
   const [observacion, setObservacion] = useState('');
-  // ➕ Nuevo estado para manejar la fecha de ingreso (inicializa con el día de hoy)
   const [fechaIngreso, setFechaIngreso] = useState(new Date().toISOString().split('T')[0]);
 
-  const [itemActual, setItemActual] = useState({
-    id_articulo: '',
-    id_talle: '',
-    id_color: '',
-    cantidad: ''
-  });
+  const [idArticuloSeleccionado, setIdArticuloSeleccionado] = useState('');
+  const [idColorSeleccionado, setIdColorSeleccionado] = useState('');
+  const [cantidadesTemporales, setCantidadesTemporales] = useState<{ [key: string]: string }>({});
 
   const [listaDetalle, setListaDetalle] = useState<DetalleArticulo[]>([]);
   const [error, setError] = useState('');
@@ -47,24 +43,20 @@ export function MovimientosStock() {
         auxiliaresService.getColores(),
         auxiliaresService.getTalles()
       ]);
-      
       setTalleres(t.sort((x: any, y: any) => x.nombre.localeCompare(y.nombre)));
       setArticulos(a.sort((x: any, y: any) => x.nombre.localeCompare(y.nombre)));
       setColores(c.sort((x: any, y: any) => x.nombre.localeCompare(y.nombre)));
-      setTalles(tal.sort((x: any, y: any) => x.nombre.localeCompare(y.nombre)));
+      setTalles(tal);
     } catch (err) {
       setError('Error al cargar los datos de los selectores.');
     }
   };
 
-  const handleItemChange = (e: React.ChangeEvent<any>) => {
-    setItemActual({
-      ...itemActual,
-      [e.target.name]: e.target.value
-    });
+  const handleCantidadTalleChange = (idTalle: string, valor: string) => {
+    setCantidadesTemporales(prev => ({ ...prev, [idTalle]: valor }));
   };
 
-  const agregarArticuloALista = (e: React.FormEvent) => {
+  const agregarBloqueTallesALista = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -73,44 +65,44 @@ export function MovimientosStock() {
       return;
     }
 
-    if (!itemActual.id_articulo || !itemActual.id_talle || !itemActual.id_color || !itemActual.cantidad) {
-      setError('Por favor, completa todos los campos del artículo antes de añadirlo.');
+    if (!idArticuloSeleccionado || !idColorSeleccionado) {
+      setError('Por favor, selecciona un Artículo y un Color antes de agregar la curva.');
       return;
     }
 
-    if (Number(itemActual.cantidad) <= 0) {
-      setError('La cantidad debe ser mayor a cero.');
+    const tallesConCantidad = Object.entries(cantidadesTemporales)
+      .map(([id_talle, cant]) => ({ id_talle, cantidad: Number(cant) }))
+      .filter(t => !isNaN(t.cantidad) && t.cantidad > 0);
+
+    if (tallesConCantidad.length === 0) {
+      setError('Debes ingresar al menos una cantidad mayor a cero en alguno de los talles.');
       return;
     }
 
-    const artSelected = articulos.find(x => x.id_articulo === Number(itemActual.id_articulo));
-    const talleSelected = talles.find(x => x.id_talle === Number(itemActual.id_talle));
-    const colSelected = colores.find(x => x.id_color === Number(itemActual.id_color));
+    const artSelected = articulos.find(x => x.id_articulo === Number(idArticuloSeleccionado));
+    const colSelected = colores.find(x => x.id_color === Number(idColorSeleccionado));
 
-    const nuevoItem: DetalleArticulo = {
-      id_articulo: itemActual.id_articulo,
-      nombre_articulo: artSelected?.nombre || 'Articulo',
-      id_talle: itemActual.id_talle,
-      nombre_talle: talleSelected?.nombre || 'Talle',
-      id_color: itemActual.id_color,
-      nombre_color: colSelected?.nombre || 'Color',
-      cantidad: Number(itemActual.cantidad)
-    };
-
-    setListaDetalle([...listaDetalle, nuevoItem]);
-    
-    setItemActual({
-      id_articulo: '',
-      id_talle: '',
-      id_color: '',
-      cantidad: ''
+    const nuevosItems: DetalleArticulo[] = tallesConCantidad.map(item => {
+      const talleSelected = talles.find(x => x.id_talle === Number(item.id_talle));
+      return {
+        id_articulo: idArticuloSeleccionado,
+        nombre_articulo: artSelected?.nombre || 'Artículo',
+        id_color: idColorSeleccionado,
+        nombre_color: colSelected?.nombre || 'Color',
+        id_talle: item.id_talle,
+        nombre_talle: talleSelected?.nombre || 'Talle',
+        cantidad: item.cantidad
+      };
     });
+
+    setListaDetalle([...listaDetalle, ...nuevosItems]);
+    setIdArticuloSeleccionado('');
+    setIdColorSeleccionado('');
+    setCantidadesTemporales({});
   };
 
-  const eliminarItemDeLista = (index: number) => {
-    const nuevaLista = [...listaDetalle];
-    nuevaLista.splice(index, 1);
-    setListaDetalle(nuevaLista);
+  const eliminarBloqueDeLista = (idArt: string, idCol: string) => {
+    setListaDetalle(prev => prev.filter(item => !(item.id_articulo === idArt && item.id_color === idCol)));
   };
 
   const guardarMovimientoFinal = async () => {
@@ -122,19 +114,13 @@ export function MovimientosStock() {
       return;
     }
 
-    if (!fechaIngreso) {
-      setError('Debes seleccionar una fecha de ingreso válida.');
-      return;
-    }
-
     if (listaDetalle.length === 0) {
       setError('Debes añadir al menos un artículo a la lista para poder guardar.');
       return;
     }
 
     try {
-      const idEstadoPorDefecto = 1; 
-
+      const idEstadoPorDefecto = 1;
       const solicitudes = listaDetalle.map(item => {
         return movimientosService.create({
           id_taller: Number(idTaller),
@@ -145,21 +131,37 @@ export function MovimientosStock() {
           cantidad: item.cantidad,
           id_estado: idEstadoPorDefecto,
           observacion: observacion.trim() || null,
-          fecha: fechaIngreso // 
+          fecha: fechaIngreso
         } as any);
       });
 
       await Promise.all(solicitudes);
-
       setSuccess(true);
-      setListaDetalle([]); 
+      setListaDetalle([]);
       setObservacion('');
-      setIdTaller(''); 
-      setFechaIngreso(new Date().toISOString().split('T')[0]); // Resetea a la fecha actual
+      setIdTaller('');
+      setFechaIngreso(new Date().toISOString().split('T')[0]);
     } catch (err: any) {
       setError('Error al registrar el bloque de movimientos en el servidor.');
     }
   };
+
+  // 🛠️ AGRUPACIÓN PARA EL RESUMEN VISUAL
+  const mapaResumen: { [key: string]: { id_articulo: string; id_color: string; nombre_articulo: string; nombre_color: string; curva: { [talle: string]: number } } } = {};
+  listaDetalle.forEach(item => {
+    const clave = `${item.id_articulo}-${item.id_color}`;
+    if (!mapaResumen[clave]) {
+      mapaResumen[clave] = {
+        id_articulo: item.id_articulo,
+        id_color: item.id_color,
+        nombre_articulo: item.nombre_articulo,
+        nombre_color: item.nombre_color,
+        curva: {}
+      };
+    }
+    mapaResumen[clave].curva[item.nombre_talle] = (mapaResumen[clave].curva[item.nombre_talle] || 0) + item.cantidad;
+  });
+  const resumenAgrupado = Object.values(mapaResumen);
 
   return (
     <Container className="mt-4">
@@ -168,205 +170,131 @@ export function MovimientosStock() {
       {error && <Alert variant="danger">{error}</Alert>}
       {success && <Alert variant="success">¡Remito de movimientos registrado con éxito total!</Alert>}
 
-      {/* SECCIÓN 1: DATOS GENERALES DEL MOVIMIENTO */}
+      {/* SECCIÓN 1 */}
       <Card className="shadow-sm mb-4 border-dark">
-        <Card.Header className="bg-dark text-white fw-bold text-uppercase">
-          1. Datos Generales del Remito
-        </Card.Header>
+        <Card.Header className="bg-dark text-white fw-bold text-uppercase">1. Datos Generales del Remito</Card.Header>
         <Card.Body>
           <Row>
-            {/* Reducido a md={3} para alinear los 4 inputs perfectamente */}
             <Col md={3} className="mb-3">
               <Form.Group>
                 <Form.Label className="fw-semibold">Tipo de Operación</Form.Label>
-                <Form.Select 
-                  value={tipoMovimiento} 
-                  onChange={(e) => setTipoMovimiento(e.target.value)}
-                  className="fw-bold text-uppercase"
-                  disabled={listaDetalle.length > 0}
-                >
+                <Form.Select value={tipoMovimiento} onChange={(e) => setTipoMovimiento(e.target.value)} className="fw-bold text-uppercase" disabled={listaDetalle.length > 0}>
                   <option value="INGRESO">🟢 INGRESO al TALLER</option>
                 </Form.Select>
               </Form.Group>
             </Col>
-
             <Col md={3} className="mb-3">
               <Form.Group>
                 <Form.Label className="fw-semibold">Taller Destino</Form.Label>
-                <Form.Select 
-                  value={idTaller} 
-                  onChange={(e) => setIdTaller(e.target.value)}
-                  disabled={listaDetalle.length > 0}
-                  required
-                >
+                <Form.Select value={idTaller} onChange={(e) => setIdTaller(e.target.value)} disabled={listaDetalle.length > 0} required>
                   <option value="">Seleccionar un taller...</option>
-                  {talleres.map(t => (
-                    <option key={t.id_taller} value={t.id_taller}>{t.nombre}</option>
-                  ))}
+                  {talleres.map(t => <option key={t.id_taller} value={t.id_taller}>{t.nombre}</option>)}
                 </Form.Select>
-                {listaDetalle.length > 0 && (
-                  <Form.Text className="text-muted d-block mt-1" style={{ fontSize: '0.82rem' }}>
-                    Taller fijo hasta vaciar la lista.
-                  </Form.Text>
-                )}
               </Form.Group>
             </Col>
-
-            {/* ➕ NUEVO: Selector de Fecha de Ingreso General */}
             <Col md={3} className="mb-3">
               <Form.Group>
                 <Form.Label className="fw-semibold">Fecha de Ingreso</Form.Label>
-                <Form.Control 
-                  type="date"
-                  value={fechaIngreso}
-                  onChange={(e) => setFechaIngreso(e.target.value)}
-                  disabled={listaDetalle.length > 0}
-                  required
-                />
-                {listaDetalle.length > 0 && (
-                  <Form.Text className="text-muted d-block mt-1" style={{ fontSize: '0.82rem' }}>
-                    Fecha fija hasta vaciar la lista.
-                  </Form.Text>
-                )}
+                <Form.Control type="date" value={fechaIngreso} onChange={(e) => setFechaIngreso(e.target.value)} disabled={listaDetalle.length > 0} required />
               </Form.Group>
             </Col>
-
             <Col md={3} className="mb-3">
               <Form.Group>
                 <Form.Label className="fw-semibold">Observaciones (Opcional)</Form.Label>
-                <Form.Control 
-                  type="text"
-                  value={observacion}
-                  onChange={(e) => setObservacion(e.target.value)}
-                  placeholder="Ej: Corte número 24 - Remeras"
-                />
+                <Form.Control type="text" value={observacion} onChange={(e) => setObservacion(e.target.value)} placeholder="Ej: Corte número 24 - Remeras" />
               </Form.Group>
             </Col>
           </Row>
         </Card.Body>
       </Card>
 
-      {/* SECCIÓN 2: CARGA DINÁMICA DE ARTÍCULOS */}
-      <Card className="shadow-sm mb-4">
-        <Card.Header className="bg-secondary text-white fw-bold text-uppercase">
-          2. Añadir Artículos al Listado
-        </Card.Header>
+      {/* SECCIÓN 2 */}
+      <Card className="shadow-sm mb-4 border-secondary">
+        <Card.Header className="bg-secondary text-white fw-bold text-uppercase">2. Carga de Artículos</Card.Header>
         <Card.Body>
-          <Form onSubmit={agregarArticuloALista}>
-            <Row className="align-items-end">
-              <Col md={3} className="mb-2">
+          <Form onSubmit={agregarBloqueTallesALista}>
+            <Row className="mb-4">
+              <Col md={6}>
                 <Form.Group>
                   <Form.Label className="fw-semibold">Artículo</Form.Label>
-                  <Form.Select 
-                    name="id_articulo" 
-                    value={itemActual.id_articulo} 
-                    onChange={handleItemChange}
-                    required
-                  >
-                    <option value="">Seleccionar artículo...</option>
-                    {articulos.map(a => (
-                      <option key={a.id_articulo} value={a.id_articulo}>{a.nombre}</option>
-                    ))}
+                  <Form.Select value={idArticuloSeleccionado} onChange={(e) => setIdArticuloSeleccionado(e.target.value)}>
+                    <option value="">Selecciona la prenda...</option>
+                    {articulos.map(a => <option key={a.id_articulo} value={a.id_articulo}>{a.nombre}</option>)}
                   </Form.Select>
                 </Form.Group>
               </Col>
-
-              <Col md={2} className="mb-2">
+              <Col md={6}>
                 <Form.Group>
-                  <Form.Label className="fw-semibold">Talle</Form.Label>
-                  <Form.Select 
-                    name="id_talle" 
-                    value={itemActual.id_talle} 
-                    onChange={handleItemChange}
-                    required
-                  >
-                    <option value="">Talle...</option>
-                    {talles.map(t => (
-                      <option key={t.id_talle} value={t.id_talle}>{t.nombre}</option>
-                    ))}
+                  <Form.Label className="fw-semibold">Color Articulo</Form.Label>
+                  <Form.Select value={idColorSeleccionado} onChange={(e) => setIdColorSeleccionado(e.target.value)}>
+                    <option value="">Selecciona el color...</option>
+                    {colores.map(c => <option key={c.id_color} value={c.id_color}>{c.nombre}</option>)}
                   </Form.Select>
                 </Form.Group>
-              </Col>
-
-              <Col md={3} className="mb-2">
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Color</Form.Label>
-                  <Form.Select 
-                    name="id_color" 
-                    value={itemActual.id_color} 
-                    onChange={handleItemChange}
-                    required
-                  >
-                    <option value="">Color...</option>
-                    {colores.map(c => (
-                      <option key={c.id_color} value={c.id_color}>{c.nombre}</option>
-                    ))}
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-
-              <Col md={2} className="mb-2">
-                <Form.Group>
-                  <Form.Label className="fw-semibold">Cantidad</Form.Label>
-                  <Form.Control 
-                    type="number" 
-                    name="cantidad"
-                    value={itemActual.cantidad} 
-                    onChange={handleItemChange}
-                    placeholder="Unidades"
-                    min="1"
-                    required
-                  />
-                </Form.Group>
-              </Col>
-
-              <Col md={2} className="mb-2">
-                <Button variant="outline-dark" type="submit" className="w-100 fw-bold">
-                  ＋ Agregar Articulo
-                </Button>
               </Col>
             </Row>
+
+            {idArticuloSeleccionado && idColorSeleccionado && (
+              <Card className="bg-light mb-3">
+                <Card.Body className="p-3">
+                  <Form.Label className="fw-bold text-uppercase mb-3 text-muted">Ingresar Cantidades por Talle:</Form.Label>
+                  <Row className="row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-2">
+                    {talles.map(t => (
+                      <Col key={t.id_talle}>
+                        <Card className="text-center p-2 border-dark shadow-sm h-100">
+                          <Form.Label className="fw-bold mb-1"><span className="badge bg-dark px-2 py-1 fs-6">{t.nombre}</span></Form.Label>
+                          <Form.Control type="number" min="0" placeholder="0" className="text-center fw-bold mt-1" value={cantidadesTemporales[t.id_talle] || ''} onChange={(e) => handleCantidadTalleChange(t.id_talle, e.target.value)} />
+                        </Card>
+                      </Col>
+                    ))}
+                  </Row>
+                  <div className="text-end mt-4">
+                    <Button variant="secondary" type="submit" className="fw-bold px-4 py-2">➕ Agregar Talles</Button>
+                  </div>
+                </Card.Body>
+              </Card>
+            )}
           </Form>
         </Card.Body>
       </Card>
 
-      {/* SECCIÓN 3: TABLA DE REVISIÓN Y GUARDADO FINAL */}
+      {/* SECCIÓN 3: CONSOLIDADA */}
       <Card className="shadow-sm">
         <Card.Header className="bg-dark text-white fw-bold text-uppercase d-flex justify-content-between align-items-center">
-          <span>Artículos Listados para Procesar</span>
-          <span className="badge bg-light text-dark fs-6">
-            Filas: {listaDetalle.length}
-          </span>
+          <span>Resumen de Artículos Listados en el Remito</span>
+          <span className="badge bg-light text-dark fs-6">Modelos: {resumenAgrupado.length}</span>
         </Card.Header>
         <Card.Body className="p-0">
           <Table striped bordered hover responsive className="mb-0 text-center align-middle">
             <thead className="table-secondary">
               <tr>
                 <th>Artículo / Prenda</th>
-                <th>Talle</th>
                 <th>Color</th>
-                <th>Cantidad</th>
+                <th>Talles</th>
                 <th>Acción</th>
               </tr>
             </thead>
             <tbody>
-              {listaDetalle.length === 0 ? (
+              {resumenAgrupado.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-muted py-4">
-                    La lista está vacía. Selecciona los campos de arriba y presiona "Agregar Fila".
-                  </td>
+                  <td colSpan={4} className="text-muted py-4">El remito está vacío. Selecciona artículo y color arriba.</td>
                 </tr>
               ) : (
-                listaDetalle.map((item, index) => (
+                resumenAgrupado.map((item, index) => (
                   <tr key={index}>
                     <td className="fw-bold text-uppercase text-start ps-4">{item.nombre_articulo}</td>
-                    <td><span className="badge bg-secondary px-2 py-1">{item.nombre_talle}</span></td>
                     <td className="text-uppercase">{item.nombre_color}</td>
-                    <td className="fw-bold text-dark fs-6">{item.cantidad}</td>
                     <td>
-                      <Button variant="danger" size="sm" onClick={() => eliminarItemDeLista(index)}>
-                        Borrar
-                      </Button>
+                      <div className="d-flex flex-wrap gap-2 justify-content-center">
+                        {Object.entries(item.curva).map(([talle, cant]) => (
+                          <span key={talle} className="badge bg-dark p-2 fs-6">
+                            {talle}: <span className="text-warning fw-bold">{cant}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td>
+                      <Button variant="danger" size="sm" onClick={() => eliminarBloqueDeLista(item.id_articulo, item.id_color)}>Borrar</Button>
                     </td>
                   </tr>
                 ))
@@ -376,9 +304,7 @@ export function MovimientosStock() {
         </Card.Body>
         {listaDetalle.length > 0 && (
           <Card.Footer className="bg-light p-3 text-end">
-            <Button variant="success" size="lg" className="fw-bold px-5 py-2 shadow" onClick={guardarMovimientoFinal}>
-              Registrar Movimiento Completo
-            </Button>
+            <Button variant="success" size="lg" className="fw-bold px-5 py-2 shadow" onClick={guardarMovimientoFinal}>Registrar Movimiento Completo</Button>
           </Card.Footer>
         )}
       </Card>
