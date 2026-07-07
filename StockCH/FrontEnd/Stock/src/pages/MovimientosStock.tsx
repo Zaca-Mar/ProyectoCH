@@ -163,6 +163,12 @@ export function MovimientosStock() {
   });
   const resumenAgrupado = Object.values(mapaResumen);
 
+  // 🧮 TOTAL POR ARTÍCULO/COLOR Y TOTAL GENERAL DEL REMITO
+  const totalPorGrupo = (curva: { [talle: string]: number }) =>
+    Object.values(curva).reduce((acc, cant) => acc + cant, 0);
+
+  const totalGeneral = listaDetalle.reduce((acc, item) => acc + item.cantidad, 0);
+
   return (
     <Container className="mt-4">
       <h2 className="mb-4 text-center text-uppercase fw-bold">Registrar Ingreso a Taller</h2>
@@ -237,7 +243,12 @@ export function MovimientosStock() {
             {idArticuloSeleccionado && idColorSeleccionado && (
               <Card className="bg-light mb-3">
                 <Card.Body className="p-3">
-                  <Form.Label className="fw-bold text-uppercase mb-3 text-muted">Ingresar Cantidades por Talle:</Form.Label>
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <Form.Label className="fw-bold text-uppercase mb-0 text-muted">Ingresar Cantidades por Talle:</Form.Label>
+                    <span className="badge bg-dark fs-6">
+                      Total a agregar: {Object.values(cantidadesTemporales).reduce((acc, v) => acc + (Number(v) || 0), 0)}
+                    </span>
+                  </div>
                   <Row className="row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-2">
                     {talles.map(t => (
                       <Col key={t.id_talle}>
@@ -262,7 +273,10 @@ export function MovimientosStock() {
       <Card className="shadow-sm">
         <Card.Header className="bg-dark text-white fw-bold text-uppercase d-flex justify-content-between align-items-center">
           <span>Resumen de Artículos Listados en el Remito</span>
-          <span className="badge bg-light text-dark fs-6">Modelos: {resumenAgrupado.length}</span>
+          <div className="d-flex gap-2">
+            <span className="badge bg-light text-dark fs-6">Modelos: {resumenAgrupado.length}</span>
+            <span className="badge bg-warning text-dark fs-6">Total unidades: {totalGeneral}</span>
+          </div>
         </Card.Header>
         <Card.Body className="p-0">
           <Table striped bordered hover responsive className="mb-0 text-center align-middle">
@@ -271,13 +285,14 @@ export function MovimientosStock() {
                 <th>Artículo / Prenda</th>
                 <th>Color</th>
                 <th>Talles</th>
+                <th>Total</th>
                 <th>Acción</th>
               </tr>
             </thead>
             <tbody>
               {resumenAgrupado.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-muted py-4">El remito está vacío. Selecciona artículo y color arriba.</td>
+                  <td colSpan={5} className="text-muted py-4">El remito está vacío. Selecciona artículo y color arriba.</td>
                 </tr>
               ) : (
                 resumenAgrupado.map((item, index) => (
@@ -294,12 +309,24 @@ export function MovimientosStock() {
                       </div>
                     </td>
                     <td>
+                      <span className="badge bg-success p-2 fs-6">{totalPorGrupo(item.curva)}</span>
+                    </td>
+                    <td>
                       <Button variant="danger" size="sm" onClick={() => eliminarBloqueDeLista(item.id_articulo, item.id_color)}>Borrar</Button>
                     </td>
                   </tr>
                 ))
               )}
             </tbody>
+            {resumenAgrupado.length > 0 && (
+              <tfoot>
+                <tr className="table-dark">
+                  <td colSpan={3} className="text-end fw-bold text-uppercase pe-3">Total general</td>
+                  <td className="fw-bold fs-5">{totalGeneral}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            )}
           </Table>
         </Card.Body>
         {listaDetalle.length > 0 && (

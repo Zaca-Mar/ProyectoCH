@@ -159,6 +159,21 @@ export function EgresosTaller() {
     }
   };
 
+  // 🧮 TOTAL PENDIENTE POR ARTÍCULO Y TOTAL GENERAL DEL TALLER
+  const totalPendientePorArticulo = (curva: { [id_talle: string]: { nombre: string; pendiente: number } }) =>
+    Object.values(curva).reduce((acc, t) => acc + t.pendiente, 0);
+
+  const totalPendienteGeneral = pendientesAgrupados.reduce(
+    (acc, item) => acc + totalPendientePorArticulo(item.curva),
+    0
+  );
+
+  // 🧮 TOTAL QUE SE ESTÁ RETIRANDO AHORA EN EL MODAL
+  const totalRetiroModal = Object.values(cantidadesRetiro).reduce(
+    (acc, v) => acc + (Number(v) || 0),
+    0
+  );
+
   return (
     <Container className="mt-4">
       <h2 className="mb-4 text-center text-uppercase fw-bold">Egresos de Taller</h2>
@@ -185,7 +200,10 @@ export function EgresosTaller() {
         <Row>
           <Col md={12}>
             <Card className="shadow-sm">
-              <Card.Header className="bg-dark text-white fw-bold text-uppercase">Mercadería Pendiente de Entrega</Card.Header>
+              <Card.Header className="bg-dark text-white fw-bold text-uppercase d-flex justify-content-between align-items-center">
+                <span>Mercadería Pendiente de Entrega</span>
+                <span className="badge bg-warning text-dark fs-6">Total pendiente: {totalPendienteGeneral}</span>
+              </Card.Header>
               <Card.Body className="p-0">
                 <Table striped bordered hover responsive className="mb-0 text-center align-middle">
                   <thead className="table-secondary">
@@ -193,13 +211,14 @@ export function EgresosTaller() {
                       <th>Artículo / Prenda</th>
                       <th>Color</th>
                       <th>En Taller </th>
+                      <th>Total</th>
                       <th>Acción</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pendientesAgrupados.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="text-muted py-4 fs-6">🎉 ¡Al día! Sin deudas pendientes.</td>
+                        <td colSpan={5} className="text-muted py-4 fs-6">🎉 ¡Al día! Sin deudas pendientes.</td>
                       </tr>
                     ) : (
                       pendientesAgrupados.map((item, index) => (
@@ -217,12 +236,24 @@ export function EgresosTaller() {
                             </div>
                           </td>
                           <td>
+                            <span className="badge bg-danger p-2 fs-6">{totalPendientePorArticulo(item.curva)}</span>
+                          </td>
+                          <td>
                             <Button variant="outline-success" size="sm" className="fw-bold" onClick={() => handleAbrirRetiro(item)}>⬇️ Registrar Entrega</Button>
                           </td>
                         </tr>
                       ))
                     )}
                   </tbody>
+                  {pendientesAgrupados.length > 0 && (
+                    <tfoot>
+                      <tr className="table-dark">
+                        <td colSpan={3} className="text-end fw-bold text-uppercase pe-3">Total general pendiente</td>
+                        <td className="fw-bold fs-5">{totalPendienteGeneral}</td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  )}
                 </Table>
               </Card.Body>
             </Card>
@@ -255,7 +286,10 @@ export function EgresosTaller() {
                 </Col>
               </Row>
               
-              <Form.Label className="fw-bold text-uppercase text-muted mb-2">Cantidades a descargar por talle:</Form.Label>
+              <div className="d-flex justify-content-between align-items-center mb-2">
+                <Form.Label className="fw-bold text-uppercase text-muted mb-0">Cantidades a descargar por talle:</Form.Label>
+                <span className="badge bg-success fs-6">Total a retirar: {totalRetiroModal}</span>
+              </div>
               <Row className="g-2">
                 {Object.entries(modeloSeleccionado.curva).map(([idTalle, tData]: any) => (
                   <Col sm={4} md={3} key={idTalle}>

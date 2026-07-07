@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Table, Alert } from 'react-bootstrap';
 import { auxiliaresService, movimientosService } from '../services/api';
 
@@ -77,6 +77,8 @@ export function Consultas() {
   const mapaPreAgrupado: { [key: string]: { 
     fecha: string;
     tipo_movimiento: string;
+    id_articulo: number;
+    id_color: number;
     nombre_articulo: string;
     nombre_color: string;
     observacion: string;
@@ -100,6 +102,8 @@ export function Consultas() {
       mapaPreAgrupado[clave] = {
         fecha: fecha,
         tipo_movimiento: tipo,
+        id_articulo: idArt,
+        id_color: idCol,
         nombre_articulo: mov.articulo.nombre,
         nombre_color: mov.color.nombre,
         observacion: obs,
@@ -113,22 +117,42 @@ export function Consultas() {
   const remitosCronologicos = Object.values(mapaPreAgrupado).sort((a, b) => a.fecha.localeCompare(b.fecha));
 
   // ====================================================================
-  // 🛠️ 3. CÁLCULO EXCLUSIVO DEL SALDO DINÁMICO ACUMULADO (Cuenta Corriente)
+  // 🛠️ 3. CÁLCULO DEL SALDO ACUMULADO GENERAL + SALDO ACUMULADO POR TALLE
+  //     (el saldo por talle se lleva por separado para cada artículo-color,
+  //      porque el talle "S" de una prenda no tiene nada que ver con el
+  //      talle "S" de otra)
   // ====================================================================
   const historialConSaldos: any[] = [];
   let saldoAcumuladoGeneral = 0;
+  const saldoPorArticuloColor: { [claveArtCol: string]: { [id_talle: number]: number } } = {};
 
   remitosCronologicos.forEach(remito => {
     const factor = remito.tipo_movimiento === 'INGRESO' ? 1 : -1;
     const totalPrendasFila = Object.values(remito.cantidadesOperacion).reduce((sum, c) => sum + c, 0);
-    
-    // Balance acumulado: Ingresos suman, Retiros restan
+
+    // Balance acumulado general: Ingresos suman, Retiros restan
     saldoAcumuladoGeneral += (totalPrendasFila * factor);
+
+    // Balance acumulado propio de ESTE artículo + color, talle por talle
+    const claveArtCol = `${remito.id_articulo}-${remito.id_color}`;
+    if (!saldoPorArticuloColor[claveArtCol]) {
+      saldoPorArticuloColor[claveArtCol] = {};
+    }
+    Object.entries(remito.cantidadesOperacion).forEach(([idTalleStr, cant]) => {
+      const idTalleNum = Number(idTalleStr);
+      const saldoAnterior = saldoPorArticuloColor[claveArtCol][idTalleNum] || 0;
+      saldoPorArticuloColor[claveArtCol][idTalleNum] = saldoAnterior + (cant * factor);
+    });
+
+    const totalSaldoArticuloActual = Object.values(saldoPorArticuloColor[claveArtCol]).reduce((sum, c) => sum + c, 0);
 
     historialConSaldos.push({
       ...remito,
       totalFilaOperacion: totalPrendasFila,
-      totalSaldoAcumulado: saldoAcumuladoGeneral
+      totalSaldoAcumulado: saldoAcumuladoGeneral,
+      // Foto del saldo por talle de este artículo-color justo después de este movimiento
+      saldoPorTalleActual: { ...saldoPorArticuloColor[claveArtCol] },
+      totalSaldoArticuloActual
     });
   });
 
@@ -156,6 +180,33 @@ export function Consultas() {
     setFechaDesde('');
     setFechaHasta('');
   };
+
+  // Texto/color explicativo reutilizable para cualquier saldo (general o por artículo)
+  const obtenerTextoSaldo = (valor: number) => {
+    if (valor > 0) return { texto: `Debe ${valor}`, clase: 'text-primary fw-bold' };
+    if (valor < 0) return { texto: `A Favor ${Math.abs(valor)}`, clase: 'text-danger fw-bold' };
+    return { texto: 'Al día', clase: 'text-success fw-semibold' };
+  };
+
+  // ====================================================================
+  // 🛠️ 5. RESUMEN GENERAL DE SALDO POR TALLE "A LA FECHA DE CONSULTA"
+  //     Toma, para cada combinación artículo+color, su último movimiento
+  //     dentro del rango filtrado (el estado más actual de cada uno) y
+  //     suma esos saldos por talle entre todos los artículos del taller.
+  // ====================================================================
+  const saldoFinalPorCombo: { [claveArtCol: string]: { [id_talle: number]: number } } = {};
+  datosVisiblesTabla.forEach(item => {
+    const claveArtCol = `${item.id_articulo}-${item.id_color}`;
+    saldoFinalPorCombo[claveArtCol] = item.saldoPorTalleActual;
+  });
+
+  const resumenSaldoPorTalle: { [id_talle: number]: number } = {};
+  Object.values(saldoFinalPorCombo).forEach(curvaCombo => {
+    Object.entries(curvaCombo).forEach(([idTalleStr, saldo]) => {
+      const idTalleNum = Number(idTalleStr);
+      resumenSaldoPorTalle[idTalleNum] = (resumenSaldoPorTalle[idTalleNum] || 0) + saldo;
+    });
+  });
 
   return (
     <Container fluid className="mt-4 mb-5 px-4">
@@ -240,6 +291,34 @@ export function Consultas() {
         </Card>
       )}
 
+      {/* 📊 RESUMEN GENERAL DE SALDO POR TALLE, A LA FECHA DE CONSULTA */}
+      {busquedaRealizada && datosVisiblesTabla.length > 0 && (
+        <Card className="shadow-sm mb-3 border-primary">
+          <Card.Header className="bg-primary text-white fw-bold text-uppercase">
+            📊 Saldo Pendiente por Talle (a la fecha de consulta)
+          </Card.Header>
+          <Card.Body className="d-flex flex-wrap gap-2">
+            {talles
+              .filter(t => (resumenSaldoPorTalle[t.id_talle] || 0) !== 0)
+              .map(t => {
+                const saldo = resumenSaldoPorTalle[t.id_talle];
+                const esDeuda = saldo > 0;
+                return (
+                  <span
+                    key={t.id_talle}
+                    className={`badge p-2 fs-6 ${esDeuda ? 'bg-primary' : 'bg-danger'}`}
+                  >
+                    Talle {t.nombre}: {esDeuda ? 'Debe' : 'A favor'} {Math.abs(saldo)}
+                  </span>
+                );
+              })}
+            {talles.filter(t => (resumenSaldoPorTalle[t.id_talle] || 0) !== 0).length === 0 && (
+              <span className="text-success fw-semibold">🎉 Sin saldo pendiente en ningún talle.</span>
+            )}
+          </Card.Body>
+        </Card>
+      )}
+
       {/* PLANILLA DE CONTROL FINAL */}
       <Card className="shadow-sm">
         <Card.Header className="bg-dark text-white fw-bold text-uppercase d-flex justify-content-between align-items-center">
@@ -281,68 +360,86 @@ export function Consultas() {
                 datosRenderizados.map((item: any, index) => {
                   const esIngreso = item.tipo_movimiento === 'INGRESO';
 
-                  // Estructuración del texto explicativo de la Cuenta Corriente
-                  let textoSaldo = '';
-                  let claseColorSaldo = 'text-secondary';
+                  // Estructuración del texto explicativo de la Cuenta Corriente (saldo general)
+                  const { texto: textoSaldo, clase: claseColorSaldo } = obtenerTextoSaldo(item.totalSaldoAcumulado);
 
-                  if (item.totalSaldoAcumulado > 0) {
-                    textoSaldo = `Debe ${item.totalSaldoAcumulado}`;
-                    claseColorSaldo = 'text-primary fw-bold'; 
-                  } else if (item.totalSaldoAcumulado < 0) {
-                    textoSaldo = `A Favor ${Math.abs(item.totalSaldoAcumulado)}`;
-                    claseColorSaldo = 'text-danger fw-bold'; 
-                  } else {
-                    textoSaldo = 'Al día';
-                    claseColorSaldo = 'text-success fw-semibold'; 
-                  }
+                  // Texto explicativo del saldo propio de este artículo + color (para el renglón intermedio)
+                  const { texto: textoSaldoArticulo, clase: claseColorSaldoArticulo } = obtenerTextoSaldo(item.totalSaldoArticuloActual);
 
                   return (
-                    <tr key={index}>
-                      <td className="small text-muted fw-semibold">
-                        {item.fecha !== 'S/D' ? item.fecha.split('-').reverse().join('/') : 'S/D'}
-                      </td>
-                      <td>
-                        <span className={`badge ${esIngreso ? 'bg-success' : 'bg-danger'} px-2 py-1 text-uppercase fw-bold`} style={{ fontSize: '0.75rem' }}>
-                          {esIngreso ? 'ENTRADA' : 'RETIRO'}
-                        </span>
-                      </td>
-                      <td className="fw-bold text-uppercase text-start ps-2" style={{ fontSize: '0.9rem' }}>
-                        {item.nombre_articulo}
-                        {item.observacion && (
-                          <span className="text-muted d-block small fw-normal text-lowercase mt-0.5">
-                            📝 {item.observacion}
+                    <Fragment key={index}>
+                      {/* 📊 RENGLÓN DE SALDO: va PRIMERO, mostrando el resultado acumulado
+                          por talle para este artículo/color justo después de este movimiento */}
+                      <tr className="table-light">
+                        <td colSpan={4} className="text-end small fw-bold text-uppercase text-muted pe-3">
+                          📊 Saldo actual — {item.nombre_articulo} ({item.nombre_color})
+                        </td>
+                        {talles.map(t => {
+                          const saldoTalle = item.saldoPorTalleActual[t.id_talle];
+                          let colorTexto = '#adb5bd';
+                          if (saldoTalle > 0) colorTexto = '#0d6efd';
+                          else if (saldoTalle < 0) colorTexto = '#dc3545';
+                          else if (saldoTalle === 0) colorTexto = '#198754';
+                          return (
+                            <td key={t.id_talle} className="small fw-bold" style={{ color: colorTexto }}>
+                              {saldoTalle !== undefined ? saldoTalle : '-'}
+                            </td>
+                          );
+                        })}
+                        <td className="small fw-bold bg-light">{item.totalSaldoArticuloActual}</td>
+                        <td className={`small text-nowrap ${claseColorSaldoArticulo}`}>
+                          {textoSaldoArticulo}
+                        </td>
+                      </tr>
+
+                      {/* Fila del movimiento que generó ese saldo */}
+                      <tr>
+                        <td className="small text-muted fw-semibold">
+                          {item.fecha !== 'S/D' ? item.fecha.split('-').reverse().join('/') : 'S/D'}
+                        </td>
+                        <td>
+                          <span className={`badge ${esIngreso ? 'bg-success' : 'bg-danger'} px-2 py-1 text-uppercase fw-bold`} style={{ fontSize: '0.75rem' }}>
+                            {esIngreso ? 'ENTRADA' : 'RETIRO'}
                           </span>
-                        )}
-                      </td>
-                      <td className="text-uppercase small fw-semibold text-secondary">{item.nombre_color}</td>
-                      
-                      {/* 🚀 RENDEREADO DE NÚMEROS LIMPIOS (SIN SIGNOS + NI -) */}
-                      {talles.map(t => {
-                        const cantNativa = item.cantidadesOperacion[t.id_talle];
-                        return (
-                          <td 
-                            key={t.id_talle} 
-                            className={`fw-bold ${cantNativa ? 'table-warning border-dark' : ''}`}
-                            style={{ 
-                              fontSize: '0.95rem',
-                              color: cantNativa ? (esIngreso ? '#198754' : '#dc3545') : '#bcbcbc'
-                            }}
-                          >
-                            {cantNativa !== undefined ? cantNativa : '-'}
-                          </td>
-                        );
-                      })}
+                        </td>
+                        <td className="fw-bold text-uppercase text-start ps-2" style={{ fontSize: '0.9rem' }}>
+                          {item.nombre_articulo}
+                          {item.observacion && (
+                            <span className="text-muted d-block small fw-normal text-lowercase mt-0.5">
+                              📝 {item.observacion}
+                            </span>
+                          )}
+                        </td>
+                        <td className="text-uppercase small fw-semibold text-secondary">{item.nombre_color}</td>
 
-                      {/* Cantidad total neta del remito de la fila */}
-                      <td className="fw-bold fs-6 bg-light text-muted">
-                        {item.totalFilaOperacion}
-                      </td>
+                        {/* 🚀 RENDEREADO DE NÚMEROS LIMPIOS (SIN SIGNOS + NI -) */}
+                        {talles.map(t => {
+                          const cantNativa = item.cantidadesOperacion[t.id_talle];
+                          return (
+                            <td 
+                              key={t.id_talle} 
+                              className={`fw-bold ${cantNativa ? 'table-warning border-dark' : ''}`}
+                              style={{ 
+                                fontSize: '0.95rem',
+                                color: cantNativa ? (esIngreso ? '#198754' : '#dc3545') : '#bcbcbc'
+                              }}
+                            >
+                              {cantNativa !== undefined ? cantNativa : '-'}
+                            </td>
+                          );
+                        })}
 
-                      {/* 🎯 SALDO EXPLICITADO EN PALABRAS */}
-                      <td className={`fs-6 table-active text-nowrap ${claseColorSaldo}`}>
-                        {textoSaldo}
-                      </td>
-                    </tr>
+                        {/* Cantidad total neta del remito de la fila */}
+                        <td className="fw-bold fs-6 bg-light text-muted">
+                          {item.totalFilaOperacion}
+                        </td>
+
+                        {/* 🎯 SALDO GENERAL EXPLICITADO EN PALABRAS */}
+                        <td className={`fs-6 table-active text-nowrap ${claseColorSaldo}`}>
+                          {textoSaldo}
+                        </td>
+                      </tr>
+                    </Fragment>
                   );
                 })
               )}
