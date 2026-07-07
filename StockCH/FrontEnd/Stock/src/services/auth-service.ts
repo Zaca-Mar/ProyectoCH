@@ -1,7 +1,6 @@
 import axios from 'axios';
 
-// Usamos la IP directa que nos funcionó en Thunder Client
-const API_URL = 'http://127.0.0.1:3001/auth';
+const API_URL = `${import.meta.env.VITE_API_URL}/auth`;
 
 export const loginService = async (username: string, password: string) => {
   const response = await axios.post(`${API_URL}/login`, { username, password });

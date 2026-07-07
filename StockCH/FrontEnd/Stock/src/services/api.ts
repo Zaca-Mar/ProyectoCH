@@ -1,8 +1,7 @@
 import axios from 'axios';
-
 // Configuramos la URL base de tu backend de NestJS
 const API = axios.create({
-  baseURL: 'http://localhost:3001',
+  baseURL: import.meta.env.VITE_API_URL,
 });
 
 export const movimientosService = {
