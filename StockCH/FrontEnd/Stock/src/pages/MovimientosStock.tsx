@@ -28,6 +28,7 @@ export function MovimientosStock() {
   const [cantidadesTemporales, setCantidadesTemporales] = useState<{ [key: string]: string }>({});
 
   const [listaDetalle, setListaDetalle] = useState<DetalleArticulo[]>([]);
+  const [bloqueEnEdicion, setBloqueEnEdicion] = useState<DetalleArticulo[] | null>(null); // 👈 NUEVO
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
@@ -99,10 +100,45 @@ export function MovimientosStock() {
     setIdArticuloSeleccionado('');
     setIdColorSeleccionado('');
     setCantidadesTemporales({});
+    setBloqueEnEdicion(null); // 👈 NUEVO
   };
 
   const eliminarBloqueDeLista = (idArt: string, idCol: string) => {
     setListaDetalle(prev => prev.filter(item => !(item.id_articulo === idArt && item.id_color === idCol)));
+  };
+
+  // 👇 NUEVO
+  const handleEditarBloque = (idArt: string, idCol: string) => {
+    setError('');
+    setSuccess(false);
+
+    const itemsDelGrupo = listaDetalle.filter(
+      item => item.id_articulo === idArt && item.id_color === idCol
+    );
+
+    const cantidadesPrecargadas: { [key: string]: string } = {};
+    itemsDelGrupo.forEach(item => {
+      cantidadesPrecargadas[item.id_talle] = String(item.cantidad);
+    });
+
+    setIdArticuloSeleccionado(idArt);
+    setIdColorSeleccionado(idCol);
+    setCantidadesTemporales(cantidadesPrecargadas);
+    setBloqueEnEdicion(itemsDelGrupo);
+
+    // Lo sacamos de la lista mientras se edita, para no duplicarlo
+    setListaDetalle(prev => prev.filter(item => !(item.id_articulo === idArt && item.id_color === idCol)));
+  };
+
+  // 👇 NUEVO
+  const cancelarEdicionBloque = () => {
+    if (bloqueEnEdicion) {
+      setListaDetalle(prev => [...prev, ...bloqueEnEdicion]);
+    }
+    setBloqueEnEdicion(null);
+    setIdArticuloSeleccionado('');
+    setIdColorSeleccionado('');
+    setCantidadesTemporales({});
   };
 
   const guardarMovimientoFinal = async () => {
@@ -218,6 +254,13 @@ export function MovimientosStock() {
       <Card className="shadow-sm mb-4 border-secondary">
         <Card.Header className="bg-secondary text-white fw-bold text-uppercase">2. Carga de Artículos</Card.Header>
         <Card.Body>
+          {bloqueEnEdicion && ( // 👈 NUEVO
+            <Alert variant="warning" className="d-flex justify-content-between align-items-center">
+              <span>✏️ Editando: <strong>{bloqueEnEdicion[0]?.nombre_articulo} - {bloqueEnEdicion[0]?.nombre_color}</strong></span>
+              <Button variant="outline-dark" size="sm" onClick={cancelarEdicionBloque}>Cancelar edición</Button>
+            </Alert>
+          )}
+
           <Form onSubmit={agregarBloqueTallesALista}>
             <Row className="mb-4">
               <Col md={6}>
@@ -260,7 +303,9 @@ export function MovimientosStock() {
                     ))}
                   </Row>
                   <div className="text-end mt-4">
-                    <Button variant="secondary" type="submit" className="fw-bold px-4 py-2">➕ Agregar Talles</Button>
+                    <Button variant="secondary" type="submit" className="fw-bold px-4 py-2">
+                      {bloqueEnEdicion ? '✏️ Actualizar Talles' : '➕ Agregar Talles'} {/* 👈 CAMBIO */}
+                    </Button>
                   </div>
                 </Card.Body>
               </Card>
@@ -312,7 +357,14 @@ export function MovimientosStock() {
                       <span className="badge bg-success p-2 fs-6">{totalPorGrupo(item.curva)}</span>
                     </td>
                     <td>
-                      <Button variant="danger" size="sm" onClick={() => eliminarBloqueDeLista(item.id_articulo, item.id_color)}>Borrar</Button>
+                      <div className="d-flex gap-2 justify-content-center">
+                        <Button variant="warning" size="sm" onClick={() => handleEditarBloque(item.id_articulo, item.id_color)}>
+                          Editar
+                        </Button>
+                        <Button variant="danger" size="sm" onClick={() => eliminarBloqueDeLista(item.id_articulo, item.id_color)}>
+                          Borrar
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))
