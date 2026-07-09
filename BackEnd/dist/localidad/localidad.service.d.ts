@@ -1,6 +1,7 @@
 import { Repository } from 'typeorm';
 import { Localidad } from './entities/localidad.entity';
 import { CreateLocalidadDto } from './dto/create-localidad.dto';
+import { UpdateLocalidadDto } from './dto/update-localidad.dto';
 import { ProvinciaService } from '../provincia/provincia.service';
 export declare class LocalidadService {
     private readonly localidadRepository;
@@ -9,4 +10,5 @@ export declare class LocalidadService {
     create(createLocalidadDto: CreateLocalidadDto): Promise<Localidad>;
     findAll(): Promise<Localidad[]>;
     findOne(id: number): Promise<Localidad>;
+    update(id: number, updateLocalidadDto: UpdateLocalidadDto): Promise<Localidad>;
 }

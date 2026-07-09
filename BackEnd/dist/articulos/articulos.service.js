@@ -35,6 +35,13 @@ let ArticulosService = class ArticulosService {
             throw new common_1.NotFoundException(`Artículo con ID ${id} no encontrado`);
         return articulo;
     }
+    async update(id, updateArticuloDto) {
+        const articulo = await this.findOne(id);
+        Object.assign(articulo, {
+            nombre: updateArticuloDto.nombre ?? articulo.nombre,
+        });
+        return await this.articuloRepository.save(articulo);
+    }
 };
 exports.ArticulosService = ArticulosService;
 exports.ArticulosService = ArticulosService = __decorate([

@@ -16,6 +16,7 @@ exports.ColorController = void 0;
 const common_1 = require("@nestjs/common");
 const color_service_1 = require("./color.service");
 const create_color_dto_1 = require("./dto/create-color.dto");
+const update_color_dto_1 = require("./dto/update-color.dto");
 let ColorController = class ColorController {
     colorService;
     constructor(colorService) {
@@ -26,6 +27,9 @@ let ColorController = class ColorController {
     }
     findAll() {
         return this.colorService.findAll();
+    }
+    update(id, updateColorDto) {
+        return this.colorService.update(+id, updateColorDto);
     }
 };
 exports.ColorController = ColorController;
@@ -42,6 +46,14 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], ColorController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, update_color_dto_1.UpdateColorDto]),
+    __metadata("design:returntype", void 0)
+], ColorController.prototype, "update", null);
 exports.ColorController = ColorController = __decorate([
     (0, common_1.Controller)('color'),
     __metadata("design:paramtypes", [color_service_1.ColorService])

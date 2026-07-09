@@ -4,7 +4,8 @@ import { auxiliaresService } from '../services/api';
 
 export function Articulos() {
   const [articulos, setArticulos] = useState<any[]>([]);
-  const [nombre, setNombre] = useState(''); // Estado simple ya que es un único campo de texto
+  const [nombre, setNombre] = useState('');
+  const [editingId, setEditingId] = useState<number | null>(null); // 👈 NUEVO
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -22,6 +23,21 @@ export function Articulos() {
     }
   };
 
+  // 👇 NUEVO
+  const handleEdit = (articulo: any) => {
+    setNombre(articulo.nombre);
+    setEditingId(articulo.id_articulo);
+    setSuccess(false);
+    setError('');
+  };
+
+  // 👇 NUEVO
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setNombre('');
+    setError('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -33,30 +49,33 @@ export function Articulos() {
     }
 
     try {
-      await auxiliaresService.createArticulo({ nombre: nombre.trim() });
+      if (editingId) {
+        await auxiliaresService.updateArticulo(editingId, { nombre: nombre.trim() });
+        setEditingId(null);
+      } else {
+        await auxiliaresService.createArticulo({ nombre: nombre.trim() });
+      }
+
       setSuccess(true);
-      
-      // Recargar la tabla automáticamente
-      cargarArticulos(); 
-      // Resetear el campo de entrada
-      setNombre(''); 
+      cargarArticulos();
+      setNombre('');
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Error al registrar el artículo.');
+      setError(err.response?.data?.message || err.message || 'Error al guardar el artículo.');
     }
   };
 
   return (
     <Container className="mt-4">
       <h2 className="mb-4 text-center text-uppercase fw-bold">Gestión de Artículos</h2>
-      
+
       {error && <Alert variant="danger">{error}</Alert>}
-      {success && <Alert variant="success">¡Artículo registrado con éxito!</Alert>}
+      {success && <Alert variant="success">{editingId ? '¡Artículo actualizado con éxito!' : '¡Artículo registrado con éxito!'}</Alert>}
 
       <Row className="mb-5">
         <Col md={12}>
           <Card className="shadow-sm">
             <Card.Header className="bg-dark text-white fw-bold text-uppercase">
-              Registrar Nuevo Artículo
+              {editingId ? 'Editar Artículo' : 'Registrar Nuevo Artículo'}
             </Card.Header>
             <Card.Body>
               <Form onSubmit={handleSubmit}>
@@ -64,19 +83,24 @@ export function Articulos() {
                   <Col md={9} className="mb-3 mb-md-0">
                     <Form.Group>
                       <Form.Label className="fw-semibold">Nombre del Artículo</Form.Label>
-                      <Form.Control 
-                        type="text" 
-                        value={nombre} 
-                        onChange={(e) => setNombre(e.target.value)} 
+                      <Form.Control
+                        type="text"
+                        value={nombre}
+                        onChange={(e) => setNombre(e.target.value)}
                         placeholder="Ej: Remera Ombu"
                         required
                       />
                     </Form.Group>
                   </Col>
-                  
-                  <Col md={3} className="text-end">
+
+                  <Col md={3} className="text-end d-flex gap-2">
+                    {editingId && (
+                      <Button variant="outline-secondary" type="button" className="w-100 fw-bold py-2" onClick={handleCancelEdit}>
+                        Cancelar
+                      </Button>
+                    )}
                     <Button variant="dark" type="submit" className="w-100 fw-bold py-2">
-                      Guardar Artículo
+                      {editingId ? 'Guardar Cambios' : 'Guardar Artículo'}
                     </Button>
                   </Col>
                 </Row>
@@ -96,20 +120,26 @@ export function Articulos() {
               <Table striped bordered hover responsive className="mb-0 text-center align-middle">
                 <thead className="table-dark">
                   <tr>
-                    <th style={{ width: '20%' }}>ID Artículo</th>
+                    <th style={{ width: '15%' }}>ID Artículo</th>
                     <th>Nombre / Descripción</th>
+                    <th style={{ width: '15%' }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {articulos.length === 0 ? (
                     <tr>
-                      <td colSpan={2} className="text-muted py-3">No hay artículos registrados en el sistema.</td>
+                      <td colSpan={3} className="text-muted py-3">No hay artículos registrados en el sistema.</td>
                     </tr>
                   ) : (
                     articulos.map((a) => (
                       <tr key={a.id_articulo}>
                         <td>{a.id_articulo}</td>
                         <td className="fw-bold text-uppercase text-start ps-5">{a.nombre}</td>
+                        <td>
+                          <Button size="sm" variant="warning" onClick={() => handleEdit(a)}>
+                            Editar
+                          </Button>
+                        </td>
                       </tr>
                     ))
                   )}

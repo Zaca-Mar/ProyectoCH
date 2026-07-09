@@ -32,6 +32,15 @@ let ColorService = class ColorService {
     async findOne(id_color) {
         return await this.colorRepository.findOneBy({ id_color });
     }
+    async update(id, updateColorDto) {
+        const color = await this.findOne(id);
+        if (!color)
+            throw new common_1.NotFoundException(`Color con ID ${id} no encontrado`);
+        Object.assign(color, {
+            nombre: updateColorDto.nombre ?? color.nombre,
+        });
+        return await this.colorRepository.save(color);
+    }
 };
 exports.ColorService = ColorService;
 exports.ColorService = ColorService = __decorate([

@@ -38,10 +38,25 @@ let LocalidadService = class LocalidadService {
         return await this.localidadRepository.find({ relations: { provincia: true } });
     }
     async findOne(id) {
-        const localidad = await this.localidadRepository.findOne({ where: { id_localidad: id } });
+        const localidad = await this.localidadRepository.findOne({
+            where: { id_localidad: id },
+            relations: { provincia: true },
+        });
         if (!localidad)
             throw new common_1.NotFoundException(`Localidad con ID ${id} no encontrada`);
         return localidad;
+    }
+    async update(id, updateLocalidadDto) {
+        const localidad = await this.findOne(id);
+        if (updateLocalidadDto.id_provincia) {
+            const provincia = await this.provinciaService.findOne(updateLocalidadDto.id_provincia);
+            localidad.provincia = provincia;
+        }
+        Object.assign(localidad, {
+            nombre: updateLocalidadDto.nombre ?? localidad.nombre,
+            cp: updateLocalidadDto.cp ?? localidad.cp,
+        });
+        return await this.localidadRepository.save(localidad);
     }
 };
 exports.LocalidadService = LocalidadService;

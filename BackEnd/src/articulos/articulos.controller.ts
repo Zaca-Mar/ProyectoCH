@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param } from '@nestjs/common';
 import { ArticulosService } from './articulos.service';
 import { CreateArticuloDto } from './dto/create-articulo.dto';
+import { UpdateArticuloDto } from './dto/update-articulo.dto';
 
-@Controller('articulos') // La ruta base será http://localhost:3000/articulos
+@Controller('articulos')
 export class ArticulosController {
   constructor(private readonly articulosService: ArticulosService) {}
 
@@ -14,5 +15,10 @@ export class ArticulosController {
   @Get()
   findAll() {
     return this.articulosService.findAll();
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() updateArticuloDto: UpdateArticuloDto) {
+    return this.articulosService.update(+id, updateArticuloDto);
   }
 }

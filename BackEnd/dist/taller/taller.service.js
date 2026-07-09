@@ -44,6 +44,19 @@ let TallerService = class TallerService {
             throw new common_1.NotFoundException(`Taller con ID ${id} no encontrado`);
         return taller;
     }
+    async update(id, updateTallerDto) {
+        const taller = await this.findOne(id);
+        if (updateTallerDto.id_localidad) {
+            const localidad = await this.localidadService.findOne(updateTallerDto.id_localidad);
+            taller.localidad = localidad;
+        }
+        Object.assign(taller, {
+            nombre: updateTallerDto.nombre ?? taller.nombre,
+            calle: updateTallerDto.calle ?? taller.calle,
+            numero: updateTallerDto.numero ?? taller.numero,
+        });
+        return await this.tallerRepository.save(taller);
+    }
 };
 exports.TallerService = TallerService;
 exports.TallerService = TallerService = __decorate([

@@ -16,6 +16,7 @@ exports.TallerController = void 0;
 const common_1 = require("@nestjs/common");
 const taller_service_1 = require("./taller.service");
 const create_taller_dto_1 = require("./dto/create-taller.dto");
+const update_taller_dto_1 = require("./dto/update-taller.dto");
 let TallerController = class TallerController {
     tallerService;
     constructor(tallerService) {
@@ -29,6 +30,9 @@ let TallerController = class TallerController {
     }
     findOne(id) {
         return this.tallerService.findOne(+id);
+    }
+    update(id, updateTallerDto) {
+        return this.tallerService.update(+id, updateTallerDto);
     }
 };
 exports.TallerController = TallerController;
@@ -52,6 +56,14 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], TallerController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, update_taller_dto_1.UpdateTallerDto]),
+    __metadata("design:returntype", void 0)
+], TallerController.prototype, "update", null);
 exports.TallerController = TallerController = __decorate([
     (0, common_1.Controller)('taller'),
     __metadata("design:paramtypes", [taller_service_1.TallerService])

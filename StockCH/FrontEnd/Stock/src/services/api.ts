@@ -28,7 +28,7 @@ export const movimientosService = {
     return response.data;
   },
   
-  // 🔒 MODIFICACIÓN: idEstado ahora es opcional (?) y la URL se arma dinámicamente
+  
   filtrar: async (idTaller: number, idEstado?: number) => {
     let url = `/movimientos-stock/filtrar?id_taller=${idTaller}`;
     
@@ -68,5 +68,21 @@ export const auxiliaresService = {
   createLocalidad: async (data: { nombre: string; id_provincia: number }) => {
     const response = await API.post('/localidad', data);
     return response.data;
+  },
+  updateTaller: async (id: number, data: { nombre?: string; calle?: string; numero?: number; id_localidad?: number }) => {
+  const response = await API.patch(`/taller/${id}`, data);
+  return response.data;
+  },
+  updateArticulo: async (id: number, data: { nombre?: string }) => {
+  const response = await API.patch(`/articulos/${id}`, data);
+  return response.data;
+  },
+  updateColor: async (id: number, data: { nombre?: string }) => {
+  const response = await API.patch(`/color/${id}`, data);
+  return response.data;
+  },
+  updateLocalidad: async (id: number, data: { nombre?: string; cp?: string; id_provincia?: number }) => {
+  const response = await API.patch(`/localidad/${id}`, data);
+  return response.data;
   },
 };

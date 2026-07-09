@@ -16,6 +16,7 @@ exports.LocalidadController = void 0;
 const common_1 = require("@nestjs/common");
 const localidad_service_1 = require("./localidad.service");
 const create_localidad_dto_1 = require("./dto/create-localidad.dto");
+const update_localidad_dto_1 = require("./dto/update-localidad.dto");
 let LocalidadController = class LocalidadController {
     localidadService;
     constructor(localidadService) {
@@ -29,6 +30,9 @@ let LocalidadController = class LocalidadController {
     }
     findOne(id) {
         return this.localidadService.findOne(+id);
+    }
+    update(id, updateLocalidadDto) {
+        return this.localidadService.update(+id, updateLocalidadDto);
     }
 };
 exports.LocalidadController = LocalidadController;
@@ -52,6 +56,14 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], LocalidadController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, update_localidad_dto_1.UpdateLocalidadDto]),
+    __metadata("design:returntype", void 0)
+], LocalidadController.prototype, "update", null);
 exports.LocalidadController = LocalidadController = __decorate([
     (0, common_1.Controller)('localidad'),
     __metadata("design:paramtypes", [localidad_service_1.LocalidadService])

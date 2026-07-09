@@ -4,13 +4,13 @@ import { auxiliaresService } from '../services/api';
 
 export function Localidades() {
   const [localidades, setLocalidades] = useState<any[]>([]);
-  const [provincias, setProvincias] = useState<any[]>([]); // Estado para el selector
-
+  const [provincias, setProvincias] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     nombre: '',
     id_provincia: ''
   });
 
+  const [editingId, setEditingId] = useState<number | null>(null); // 👈 NUEVO
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
@@ -24,14 +24,12 @@ export function Localidades() {
         auxiliaresService.getLocalidades(),
         auxiliaresService.getProvincias()
       ]);
-      const localidadesOrdenadas = listaLocalidades.sort((a: any, b: any) => 
-      a.nombre.localeCompare(b.nombre)
-    );
-
-    // ➕ ORDENAR ALFABÉTICAMENTE LAS PROVINCIAS (Para el selector desplegable)
-    const provinciasOrdenadas = listaProvincias.sort((a: any, b: any) => 
-      a.nombre.localeCompare(b.nombre)
-    );
+      const localidadesOrdenadas = listaLocalidades.sort((a: any, b: any) =>
+        a.nombre.localeCompare(b.nombre)
+      );
+      const provinciasOrdenadas = listaProvincias.sort((a: any, b: any) =>
+        a.nombre.localeCompare(b.nombre)
+      );
       setLocalidades(localidadesOrdenadas);
       setProvincias(provinciasOrdenadas);
     } catch (err) {
@@ -44,6 +42,24 @@ export function Localidades() {
       ...formData,
       [e.target.name]: e.target.value
     });
+  };
+
+  // 👇 NUEVO
+  const handleEdit = (localidad: any) => {
+    setFormData({
+      nombre: localidad.nombre,
+      id_provincia: String(localidad.provincia?.id_provincia || localidad.id_provincia || '')
+    });
+    setEditingId(localidad.id_localidad);
+    setSuccess(false);
+    setError('');
+  };
+
+  // 👇 NUEVO
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setFormData({ nombre: '', id_provincia: '' });
+    setError('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -59,34 +75,38 @@ export function Localidades() {
     try {
       const payload = {
         nombre: formData.nombre.trim(),
-        id_provincia: Number(formData.id_provincia) // Transformamos a número para NestJS
+        id_provincia: Number(formData.id_provincia)
       };
 
-      await auxiliaresService.createLocalidad(payload);
+      if (editingId) {
+        await auxiliaresService.updateLocalidad(editingId, payload);
+        setEditingId(null);
+      } else {
+        await auxiliaresService.createLocalidad(payload);
+      }
+
       setSuccess(true);
-      
-      // Recargar la tabla
+
       const listaLocalidades = await auxiliaresService.getLocalidades();
-      setLocalidades(listaLocalidades);
-      
-      setFormData({ nombre: '', id_provincia: '' }); 
+      setLocalidades(listaLocalidades.sort((a: any, b: any) => a.nombre.localeCompare(b.nombre)));
+
+      setFormData({ nombre: '', id_provincia: '' });
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Error al registrar la localidad.');
+      setError(err.response?.data?.message || err.message || 'Error al guardar la localidad.');
     }
   };
 
   return (
     <Container className="mt-4">
       <h2 className="mb-4 text-center text-uppercase fw-bold">Gestión de Localidades</h2>
-      
       {error && <Alert variant="danger">{error}</Alert>}
-      {success && <Alert variant="success">¡Localidad registrada con éxito!</Alert>}
+      {success && <Alert variant="success">{editingId ? '¡Localidad actualizada con éxito!' : '¡Localidad registrada con éxito!'}</Alert>}
 
       <Row className="mb-5">
         <Col md={12}>
           <Card className="shadow-sm">
             <Card.Header className="bg-dark text-white fw-bold text-uppercase">
-              Registrar Nueva Localidad
+              {editingId ? 'Editar Localidad' : 'Registrar Nueva Localidad'}
             </Card.Header>
             <Card.Body>
               <Form onSubmit={handleSubmit}>
@@ -94,23 +114,22 @@ export function Localidades() {
                   <Col md={5} className="mb-3 mb-md-0">
                     <Form.Group>
                       <Form.Label className="fw-semibold">Nombre de la Localidad</Form.Label>
-                      <Form.Control 
-                        type="text" 
+                      <Form.Control
+                        type="text"
                         name="nombre"
-                        value={formData.nombre} 
-                        onChange={handleChange} 
+                        value={formData.nombre}
+                        onChange={handleChange}
                         placeholder="Ej: Villa María, Río Cuarto"
                         required
                       />
                     </Form.Group>
                   </Col>
-
                   <Col md={4} className="mb-3 mb-md-0">
                     <Form.Group>
                       <Form.Label className="fw-semibold">Provincia Destino</Form.Label>
-                      <Form.Select 
-                        name="id_provincia" 
-                        value={formData.id_provincia} 
+                      <Form.Select
+                        name="id_provincia"
+                        value={formData.id_provincia}
                         onChange={handleChange}
                         required
                       >
@@ -123,10 +142,14 @@ export function Localidades() {
                       </Form.Select>
                     </Form.Group>
                   </Col>
-                  
-                  <Col md={3} className="text-end">
+                  <Col md={3} className="text-end d-flex gap-2">
+                    {editingId && (
+                      <Button variant="outline-secondary" type="button" className="w-100 fw-bold py-2" onClick={handleCancelEdit}>
+                        Cancelar
+                      </Button>
+                    )}
                     <Button variant="dark" type="submit" className="w-100 fw-bold py-2">
-                      Guardar Localidad
+                      {editingId ? 'Guardar Cambios' : 'Guardar Localidad'}
                     </Button>
                   </Col>
                 </Row>
@@ -146,15 +169,16 @@ export function Localidades() {
               <Table striped bordered hover responsive className="mb-0 text-center align-middle">
                 <thead className="table-dark">
                   <tr>
-                    <th style={{ width: '20%' }}>ID Localidad</th>
+                    <th style={{ width: '15%' }}>ID Localidad</th>
                     <th>Nombre / Descripción</th>
                     <th>Provincia</th>
+                    <th style={{ width: '15%' }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {localidades.length === 0 ? (
                     <tr>
-                      <td colSpan={3} className="text-muted py-3">No hay localidades registradas en el sistema.</td>
+                      <td colSpan={4} className="text-muted py-3">No hay localidades registradas en el sistema.</td>
                     </tr>
                   ) : (
                     localidades.map((loc) => (
@@ -165,6 +189,11 @@ export function Localidades() {
                           <span className="badge bg-dark text-uppercase px-3 py-2">
                             {loc.provincia?.nombre || loc.id_provincia || 'N/A'}
                           </span>
+                        </td>
+                        <td>
+                          <Button size="sm" variant="warning" onClick={() => handleEdit(loc)}>
+                            Editar
+                          </Button>
                         </td>
                       </tr>
                     ))

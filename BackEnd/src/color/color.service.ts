@@ -1,8 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Color } from './entities/color.entity';
 import { CreateColorDto } from './dto/create-color.dto';
+import { UpdateColorDto } from './dto/update-color.dto';
+
 @Injectable()
 export class ColorService {
   constructor(
@@ -10,18 +12,27 @@ export class ColorService {
     private readonly colorRepository: Repository<Color>,
   ) {}
 
-  //Crear un nuevo color
   async create(createColorDto: CreateColorDto): Promise<Color> {
     const nuevoColor = this.colorRepository.create(createColorDto);
     return await this.colorRepository.save(nuevoColor);
   }
 
-  //Traer todos los colores
   async findAll(): Promise<Color[]> {
     return await this.colorRepository.find();
   }
 
   async findOne(id_color: number): Promise<Color | null> {
     return await this.colorRepository.findOneBy({ id_color });
+  }
+
+  async update(id: number, updateColorDto: UpdateColorDto): Promise<Color> {
+    const color = await this.findOne(id);
+    if (!color) throw new NotFoundException(`Color con ID ${id} no encontrado`);
+
+    Object.assign(color, {
+      nombre: updateColorDto.nombre ?? color.nombre,
+    });
+
+    return await this.colorRepository.save(color);
   }
 }
