@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param } from '@nestjs/common';
 import { TalleService } from './talle.service';
 
 @Controller('talle')
@@ -18,5 +18,10 @@ export class TalleController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.talleService.findOne(+id);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.talleService.remove(+id);
   }
 }
