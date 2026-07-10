@@ -20,7 +20,7 @@ export const movimientosService = {
     id_talle: number;
     id_color: number;
     cantidad: number;
-    id_estado: number;
+    id_estado?: number;
     observacion: string | null;
     fecha: string; 
   }) => {

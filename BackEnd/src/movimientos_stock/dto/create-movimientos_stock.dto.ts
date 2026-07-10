@@ -1,4 +1,4 @@
-import { IsEnum, IsNumber, IsPositive } from 'class-validator';
+import { IsEnum, IsNumber, IsPositive, IsOptional } from 'class-validator';
 
 export class CreateMovimientosStockDto {
   @IsEnum(['INGRESO', 'EGRESO'], {
@@ -14,18 +14,18 @@ export class CreateMovimientosStockDto {
   id_articulo!: number;
 
   @IsNumber()
-  id_color!: number; 
+  id_color!: number;
 
   @IsNumber()
   id_taller!: number;
 
+  @IsOptional()
   @IsNumber()
-  id_estado!: number;
+  id_estado?: number;
 
   @IsNumber()
   id_talle!: number;
 
   observacion?: string;
-
   fecha?: string;
 }

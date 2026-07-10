@@ -156,7 +156,6 @@ export function MovimientosStock() {
     }
 
     try {
-      const idEstadoPorDefecto = 1;
       const solicitudes = listaDetalle.map(item => {
         return movimientosService.create({
           id_taller: Number(idTaller),
@@ -165,7 +164,6 @@ export function MovimientosStock() {
           id_talle: Number(item.id_talle),
           id_color: Number(item.id_color),
           cantidad: item.cantidad,
-          id_estado: idEstadoPorDefecto,
           observacion: observacion.trim() || null,
           fecha: fechaIngreso
         } as any);

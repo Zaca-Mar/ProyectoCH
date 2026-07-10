@@ -24,11 +24,15 @@ export class MovimientosStockService {
   async create(createDto: CreateMovimientosStockDto): Promise<MovimientosStock> {
     const articulo = await this.articulosService.findOne(createDto.id_articulo);
     const taller = await this.tallerService.findOne(createDto.id_taller);
-    const estado = await this.estadoService.findOne(createDto.id_estado);
     const color = await this.colorService.findOne(createDto.id_color);
     const talle = await this.talleService.findOne(createDto.id_talle);
 
-    if (!articulo || !taller || !estado || !color || !talle) {
+    // El estado ahora es opcional: solo se busca si vino un id_estado
+    const estado = createDto.id_estado
+      ? await this.estadoService.findOne(createDto.id_estado)
+      : undefined;
+
+    if (!articulo || !taller || !color || !talle) {
       throw new Error('One or more required entities were not found (Check id_talle)');
     }
 
@@ -38,12 +42,10 @@ export class MovimientosStockService {
     nuevoMovimiento.observacion = createDto.observacion ?? '';
     nuevoMovimiento.articulo = articulo;
     nuevoMovimiento.taller = taller;
-    nuevoMovimiento.estado = estado;
     nuevoMovimiento.color = color;
     nuevoMovimiento.talle = talle;
-    
-   
     nuevoMovimiento.fecha = createDto.fecha ?? '';
+    if (estado) nuevoMovimiento.estado = estado;
 
     return await this.movimientosRepository.save(nuevoMovimiento);
   }
@@ -52,19 +54,15 @@ export class MovimientosStockService {
     return await this.movimientosRepository.find();
   }
 
-  // 🔒 MODIFICACIÓN: idEstado pasa a ser opcional y la query se arma de forma dinámica
   async findByTallerAndEstado(idTaller: number, idEstado?: number): Promise<MovimientosStock[]> {
-    // Definimos la base del objeto 'where' obligatoria con el taller
     const condicionesBusqueda: FindOptionsWhere<MovimientosStock> = {
       taller: { id_taller: idTaller },
     };
 
-    // Si viene el estado, es un número válido y no es un NaN, lo sumamos al filtro
     if (idEstado !== undefined && !isNaN(idEstado)) {
       condicionesBusqueda.estado = { id_estado: idEstado };
     }
 
-    // Ejecutamos la búsqueda con las relaciones para que devuelva los nombres en las tablas del Front
     return await this.movimientosRepository.find({
       where: condicionesBusqueda,
       relations: {

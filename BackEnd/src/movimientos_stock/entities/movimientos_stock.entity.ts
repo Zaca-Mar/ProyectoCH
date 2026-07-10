@@ -8,35 +8,35 @@ import { Talle } from '../../talle/entities/talle.entity';
 @Entity('movimientos_stock')
 export class MovimientosStock {
   @PrimaryGeneratedColumn()
-  id_movimiento!: number; // 
+  id_movimiento!: number;
 
   @Column({ type: 'enum', enum: ['INGRESO', 'EGRESO'] })
-  tipo_movimiento!: string; // 
+  tipo_movimiento!: string;
 
   @Column({ type: 'int' })
-  cantidad!: number; // 
+  cantidad!: number;
 
-  @Column({ type: 'varchar', length: 255, nullable: true }) // ➕ Observación opcional
+  @Column({ type: 'varchar', length: 255, nullable: true })
   observacion!: string;
 
-  @Column({ type: 'date', nullable: true }) // Guardará formato YYYY-MM-DD
+  @Column({ type: 'date', nullable: true })
   fecha!: string;
 
   @ManyToOne(() => Articulo, { eager: true })
   @JoinColumn({ name: 'id_articulo' })
-  articulo!: Articulo; // 
+  articulo!: Articulo;
 
   @ManyToOne(() => Color, { eager: true })
   @JoinColumn({ name: 'id_color' })
-  color!: Color; // 
+  color!: Color;
 
   @ManyToOne(() => Taller, (taller) => taller.movimientos, { eager: true })
   @JoinColumn({ name: 'id_taller' })
-  taller!: Taller; // 
+  taller!: Taller;
 
-  @ManyToOne(() => Estado, (estado) => estado.movimientos, { eager: true })
+  @ManyToOne(() => Estado, (estado) => estado.movimientos, { eager: true, nullable: true })
   @JoinColumn({ name: 'id_estado' })
-  estado!: Estado; // 
+  estado?: Estado;
 
   @ManyToOne(() => Talle, { eager: true, nullable: false })
   @JoinColumn({ name: 'id_talle' })
