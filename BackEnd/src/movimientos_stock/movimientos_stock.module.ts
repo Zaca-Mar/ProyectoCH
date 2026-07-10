@@ -7,8 +7,7 @@ import { ArticulosModule } from '../articulos/articulos.module';
 import { TallerModule } from '../taller/taller.module';
 import { EstadoModule } from '../estado/estado.module';
 import { ColorModule } from '../color/color.module';
-import { TalleModule } from '@/talle/talle.module';
-
+import { TalleModule } from '../talle/talle.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([MovimientosStock]),
