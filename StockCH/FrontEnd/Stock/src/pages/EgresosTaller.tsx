@@ -144,7 +144,6 @@ export function EgresosTaller() {
           id_color: modeloSeleccionado.id_color,
           id_talle: r.idTalle,
           cantidad: r.cantidad,
-          id_estado: 1,
           observacion: observacion.trim(),
           fecha: fechaEgreso
         } as any);
