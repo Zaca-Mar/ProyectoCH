@@ -25,13 +25,7 @@ const OFFSET_IZQ = {
   color: ANCHOS.fecha + ANCHOS.operacion + ANCHOS.descripcion,
 };
 
-const OFFSET_DER = {
-  saldoDeuda: 0,
-  cantidad: ANCHOS.saldoDeuda,
-};
-
 const SOMBRA_IZQ: CSSProperties = { boxShadow: '2px 0 4px -2px rgba(0,0,0,0.35)' };
-const SOMBRA_DER: CSSProperties = { boxShadow: '-2px 0 4px -2px rgba(0,0,0,0.35)' };
 
 // background es obligatorio: una celda sticky SIN fondo opaco deja ver el
 // contenido que pasa por detrás al hacer scroll, así que siempre hay que
@@ -39,16 +33,6 @@ const SOMBRA_DER: CSSProperties = { boxShadow: '-2px 0 4px -2px rgba(0,0,0,0.35)
 const stickyIzq = (offset: number, ancho: number, background: string, extra: CSSProperties = {}): CSSProperties => ({
   position: 'sticky',
   left: offset,
-  width: ancho,
-  minWidth: ancho,
-  background,
-  zIndex: 2,
-  ...extra,
-});
-
-const stickyDer = (offset: number, ancho: number, background: string, extra: CSSProperties = {}): CSSProperties => ({
-  position: 'sticky',
-  right: offset,
   width: ancho,
   minWidth: ancho,
   background,
@@ -392,8 +376,8 @@ export function Consultas() {
                 <th rowSpan={2} className="align-middle" style={stickyIzq(OFFSET_IZQ.descripcion, ANCHOS.descripcion, '#e2e3e5')}>Descripción / Artículo</th>
                 <th rowSpan={2} className="align-middle" style={stickyIzq(OFFSET_IZQ.color, ANCHOS.color, '#e2e3e5', SOMBRA_IZQ)}>Color</th>
                 <th colSpan={talles.length} className="bg-dark text-white py-1 text-uppercase small"> Talles </th>
-                <th rowSpan={2} className="align-middle bg-dark text-white" style={stickyDer(OFFSET_DER.cantidad, ANCHOS.cantidad, '#212529', SOMBRA_DER)}>Cant.</th>
-                <th rowSpan={2} className="align-middle table-active text-dark" style={stickyDer(OFFSET_DER.saldoDeuda, ANCHOS.saldoDeuda, '#e9ecef')}>Saldo Deuda</th>
+                <th rowSpan={2} className="align-middle bg-dark text-white" style={{ minWidth: ANCHOS.cantidad }}>Cant.</th>
+                <th rowSpan={2} className="align-middle table-active text-dark" style={{ minWidth: ANCHOS.saldoDeuda }}>Saldo Deuda</th>
               </tr>
               <tr className="bg-light">
                 {talles.map(t => (
@@ -444,10 +428,10 @@ export function Consultas() {
                             </td>
                           );
                         })}
-                        <td className="small fw-bold" style={stickyDer(OFFSET_DER.cantidad, ANCHOS.cantidad, '#f8f9fa', SOMBRA_DER)}>
+                        <td className="small fw-bold bg-light">
                           {item.totalSaldoArticuloActual}
                         </td>
-                        <td className={`small text-nowrap ${claseColorSaldoArticulo}`} style={stickyDer(OFFSET_DER.saldoDeuda, ANCHOS.saldoDeuda, '#f8f9fa')}>
+                        <td className={`small text-nowrap ${claseColorSaldoArticulo}`}>
                           {textoSaldoArticulo}
                         </td>
                       </tr>
@@ -498,12 +482,12 @@ export function Consultas() {
                         })}
 
                         {/* Cantidad total neta del remito de la fila */}
-                        <td className="fw-bold fs-6 text-muted" style={stickyDer(OFFSET_DER.cantidad, ANCHOS.cantidad, '#f8f9fa', SOMBRA_DER)}>
+                        <td className="fw-bold fs-6 bg-light text-muted">
                           {item.totalFilaOperacion}
                         </td>
 
                         {/* 🎯 SALDO GENERAL EXPLICITADO EN PALABRAS */}
-                        <td className={`fs-6 text-nowrap ${claseColorSaldo}`} style={stickyDer(OFFSET_DER.saldoDeuda, ANCHOS.saldoDeuda, '#e9ecef')}>
+                        <td className={`fs-6 table-active text-nowrap ${claseColorSaldo}`}>
                           {textoSaldo}
                         </td>
                       </tr>
