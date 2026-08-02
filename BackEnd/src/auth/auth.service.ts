@@ -21,7 +21,6 @@ export class AuthService {
     }
 
     // 2. Comparar la contraseña ingresada con el Hash de la BD
-    // Asegurarnos de que exista el hash en la BD antes de comparar
     if (!user.password) {
       throw new UnauthorizedException('Credenciales incorrectas');
     }
