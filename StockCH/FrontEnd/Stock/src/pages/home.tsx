@@ -8,14 +8,14 @@ export function Inicio({ onNavigate }: InicioProps) {
   const opciones = [
     {
       titulo: 'Cargar Movimientos',
-      descripcion: 'Registrar ingresos o egresos de mercadería en el stock.',
+      descripcion: 'Registrar ingresos de mercadería en el stock.',
       id: 'movimientos',
       variante: 'info',
     },
     {
       titulo: 'Egresos de Taller',
       descripcion: 'Ver prendas que te debe cada taller y registrar las entregas.',
-      id: 'egresos-taller',
+      id: 'info',
       variante: 'danger', 
     },
     {
