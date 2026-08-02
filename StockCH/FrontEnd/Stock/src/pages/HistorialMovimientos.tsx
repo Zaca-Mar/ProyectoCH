@@ -12,7 +12,7 @@ export function HistorialMovimientos() {
   const [filtroTaller, setFiltroTaller] = useState('');
   const [filtroTipo, setFiltroTipo] = useState('');
 
-  const [error, setError] = useState('');
+  const [error, setError] = useState(''); 
   const [success, setSuccess] = useState('');
   const [cargando, setCargando] = useState(false);
 

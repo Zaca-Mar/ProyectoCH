@@ -15,7 +15,7 @@ export function Inicio({ onNavigate }: InicioProps) {
     {
       titulo: 'Egresos de Taller',
       descripcion: 'Ver prendas que te debe cada taller y registrar las entregas.',
-      id: 'info',
+      id: 'egresos',
       variante: 'danger', 
     },
     {
@@ -23,6 +23,12 @@ export function Inicio({ onNavigate }: InicioProps) {
       descripcion: 'Filtrar y revisar la cantidad de prendas por taller y estado.',
       id: 'consultas',
       variante: 'info', 
+    },
+    {
+      titulo: 'Historial de Movimientos',
+      descripcion: 'Revisar el historial completo de movimientos en el sistema.',
+      id: 'historial',
+      variante: 'info',
     },
     {
       titulo: 'Cargar Talleres',
