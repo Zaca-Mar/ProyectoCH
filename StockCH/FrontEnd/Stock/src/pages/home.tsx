@@ -13,6 +13,18 @@ export function Inicio({ onNavigate }: InicioProps) {
       variante: 'info',
     },
     {
+      titulo: 'Egresos de Taller',
+      descripcion: 'Ver prendas que te debe cada taller y registrar las entregas.',
+      id: 'egresos-taller',
+      variante: 'danger', 
+    },
+    {
+      titulo: 'Consultar Stock',
+      descripcion: 'Filtrar y revisar la cantidad de prendas por taller y estado.',
+      id: 'consultas',
+      variante: 'info', 
+    },
+    {
       titulo: 'Cargar Talleres',
       descripcion: 'Gestionar y dar de alta nuevos talleres en el sistema.',
       id: 'talleres',
@@ -24,12 +36,7 @@ export function Inicio({ onNavigate }: InicioProps) {
       id: 'articulos',
       variante: 'info',
     },
-    {
-      titulo: 'Consultar Stock',
-      descripcion: 'Filtrar y revisar la cantidad de prendas por taller y estado.',
-      id: 'consultas',
-      variante: 'info', 
-    },
+    
     {
       titulo: 'Cargar Colores',
       descripcion: 'Gestionar y dar de alta nuevos colores en el sistema.',
@@ -42,12 +49,7 @@ export function Inicio({ onNavigate }: InicioProps) {
       id: 'localidades',
       variante: 'info', 
     },
-    {
-      titulo: 'Egresos de Taller',
-      descripcion: 'Ver prendas que te debe cada taller y registrar las entregas.',
-      id: 'egresos-taller',
-      variante: 'danger', 
-    },
+    
   ];
 
   return (
