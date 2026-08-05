@@ -17,6 +17,7 @@ export function EgresosTaller() {
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     auxiliaresService.getTalleres().then(data => {
@@ -115,6 +116,7 @@ export function EgresosTaller() {
   };
 
   const handleGuardarRetiroMasivo = async () => {
+    if (isSaving) return;
     setError('');
     
     const retirosValidos = Object.entries(cantidadesRetiro)
@@ -135,6 +137,7 @@ export function EgresosTaller() {
       }
     }
 
+    setIsSaving(true);
     try {
       const solicitudes = retirosValidos.map(r => {
         return movimientosService.create({
@@ -155,6 +158,8 @@ export function EgresosTaller() {
       cargarStockPendiente(Number(idTaller));
     } catch (err) {
       setError('Error al procesar el lote de egresos en el servidor.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -303,8 +308,10 @@ export function EgresosTaller() {
           )}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowModal(false)}>Cancelar</Button>
-          <Button variant="success" className="fw-bold" onClick={handleGuardarRetiroMasivo}>Confirmar Salida</Button>
+          <Button variant="secondary" onClick={() => setShowModal(false)} disabled={isSaving}>Cancelar</Button>
+          <Button variant="success" className="fw-bold" onClick={handleGuardarRetiroMasivo} disabled={isSaving}>
+            {isSaving ? 'Confirmando...' : 'Confirmar Salida'}
+          </Button>
         </Modal.Footer>
       </Modal>
     </Container>

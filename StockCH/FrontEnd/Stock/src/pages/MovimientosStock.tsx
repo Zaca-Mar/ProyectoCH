@@ -28,9 +28,10 @@ export function MovimientosStock() {
   const [cantidadesTemporales, setCantidadesTemporales] = useState<{ [key: string]: string }>({});
 
   const [listaDetalle, setListaDetalle] = useState<DetalleArticulo[]>([]);
-  const [bloqueEnEdicion, setBloqueEnEdicion] = useState<DetalleArticulo[] | null>(null); // 👈 NUEVO
+  const [bloqueEnEdicion, setBloqueEnEdicion] = useState<DetalleArticulo[] | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     cargarDatosIniciales();
@@ -100,14 +101,13 @@ export function MovimientosStock() {
     setIdArticuloSeleccionado('');
     setIdColorSeleccionado('');
     setCantidadesTemporales({});
-    setBloqueEnEdicion(null); // 👈 NUEVO
+    setBloqueEnEdicion(null);
   };
 
   const eliminarBloqueDeLista = (idArt: string, idCol: string) => {
     setListaDetalle(prev => prev.filter(item => !(item.id_articulo === idArt && item.id_color === idCol)));
   };
 
-  // 👇 NUEVO
   const handleEditarBloque = (idArt: string, idCol: string) => {
     setError('');
     setSuccess(false);
@@ -130,7 +130,6 @@ export function MovimientosStock() {
     setListaDetalle(prev => prev.filter(item => !(item.id_articulo === idArt && item.id_color === idCol)));
   };
 
-  // 👇 NUEVO
   const cancelarEdicionBloque = () => {
     if (bloqueEnEdicion) {
       setListaDetalle(prev => [...prev, ...bloqueEnEdicion]);
@@ -142,6 +141,7 @@ export function MovimientosStock() {
   };
 
   const guardarMovimientoFinal = async () => {
+    if (isSaving) return;
     setError('');
     setSuccess(false);
 
@@ -155,6 +155,7 @@ export function MovimientosStock() {
       return;
     }
 
+    setIsSaving(true);
     try {
       const solicitudes = listaDetalle.map(item => {
         return movimientosService.create({
@@ -177,6 +178,8 @@ export function MovimientosStock() {
       setFechaIngreso(new Date().toISOString().split('T')[0]);
     } catch (err: any) {
       setError('Error al registrar el bloque de movimientos en el servidor.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -252,7 +255,7 @@ export function MovimientosStock() {
       <Card className="shadow-sm mb-4 border-secondary">
         <Card.Header className="bg-secondary text-white fw-bold text-uppercase">2. Carga de Artículos</Card.Header>
         <Card.Body>
-          {bloqueEnEdicion && ( // 👈 NUEVO
+          {bloqueEnEdicion && (
             <Alert variant="warning" className="d-flex justify-content-between align-items-center">
               <span>✏️ Editando: <strong>{bloqueEnEdicion[0]?.nombre_articulo} - {bloqueEnEdicion[0]?.nombre_color}</strong></span>
               <Button variant="outline-dark" size="sm" onClick={cancelarEdicionBloque}>Cancelar edición</Button>
@@ -302,7 +305,7 @@ export function MovimientosStock() {
                   </Row>
                   <div className="text-end mt-4">
                     <Button variant="secondary" type="submit" className="fw-bold px-4 py-2">
-                      {bloqueEnEdicion ? '✏️ Actualizar Talles' : '➕ Agregar Talles'} {/* 👈 CAMBIO */}
+                      {bloqueEnEdicion ? '✏️ Actualizar Talles' : '➕ Agregar Talles'}
                     </Button>
                   </div>
                 </Card.Body>
@@ -381,7 +384,9 @@ export function MovimientosStock() {
         </Card.Body>
         {listaDetalle.length > 0 && (
           <Card.Footer className="bg-light p-3 text-end">
-            <Button variant="success" size="lg" className="fw-bold px-5 py-2 shadow" onClick={guardarMovimientoFinal}>Registrar Movimiento Completo</Button>
+            <Button variant="success" size="lg" className="fw-bold px-5 py-2 shadow" onClick={guardarMovimientoFinal} disabled={isSaving}>
+              {isSaving ? 'Registrando...' : 'Registrar Movimiento Completo'}
+            </Button>
           </Card.Footer>
         )}
       </Card>

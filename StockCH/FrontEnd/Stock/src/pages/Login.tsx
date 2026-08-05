@@ -11,10 +11,13 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
     setError('');
+    setIsLoading(true);
 
     try {
       await loginService(username, password);
@@ -25,6 +28,8 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
       } else {
         setError('Hubo un problema de conexión con el servidor.');
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -104,8 +109,12 @@ export const Login = ({ onLoginSuccess }: LoginProps) => {
               style={{ padding: '10px', marginBottom: '24px', borderRadius: '6px', border: '1px solid #ced4da', fontSize: '14px', outline: 'none' }}
             />
 
-            <button type="submit" style={{ padding: '12px', backgroundColor: '#1a1a1a', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '14px', transition: 'background-color 0.2s' }}>
-              Ingresar
+            <button 
+              type="submit" 
+              disabled={isLoading}
+              style={{ padding: '12px', backgroundColor: '#1a1a1a', color: 'white', border: 'none', borderRadius: '6px', cursor: isLoading ? 'not-allowed' : 'pointer', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '14px', transition: 'background-color 0.2s', opacity: isLoading ? 0.7 : 1 }}
+            >
+              {isLoading ? 'Ingresando...' : 'Ingresar'}
             </button>
           </form>
 
