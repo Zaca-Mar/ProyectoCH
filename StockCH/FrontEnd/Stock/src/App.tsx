@@ -51,7 +51,7 @@ function App() {
   return (
     <div className="bg-light min-vh-100 pb-5">
       {pantallaActual !== 'inicio' && pantallaActual !== 'login' && (
-        <nav className="navbar navbar-dark bg-dark px-4 py-2 mb-4 shadow-sm d-flex justify-content-between align-items-center">
+        <nav className="navbar navbar-dark bg-dark px-4 py-2 mb-4 shadow-sm d-flex justify-content-between align-items-center sticky-top">
           <span
             className="navbar-brand fw-bold text-uppercase mb-0"
             style={{ cursor: 'pointer', fontSize: '0.9rem' }}
