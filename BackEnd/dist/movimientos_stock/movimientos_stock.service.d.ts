@@ -1,6 +1,8 @@
 import { Repository } from 'typeorm';
 import { MovimientosStock } from './entities/movimientos_stock.entity';
 import { CreateMovimientosStockDto } from './dto/create-movimientos_stock.dto';
+import { UpdateMovimientosStockDto } from './dto/update-movimientos_stock.dto';
+import { UpdateLoteDto } from './dto/update-lote.dto';
 import { ArticulosService } from '../articulos/articulos.service';
 import { TallerService } from '../taller/taller.service';
 import { EstadoService } from '../estado/estado.service';
@@ -17,4 +19,13 @@ export declare class MovimientosStockService {
     create(createDto: CreateMovimientosStockDto): Promise<MovimientosStock>;
     findAll(): Promise<MovimientosStock[]>;
     findByTallerAndEstado(idTaller: number, idEstado?: number): Promise<MovimientosStock[]>;
+    update(id: number, updateDto: UpdateMovimientosStockDto): Promise<MovimientosStock>;
+    remove(id: number): Promise<{
+        message: string;
+    }>;
+    private findLoteGroup;
+    removeLoteGroup(loteId: string, idArticulo: number, idColor: number): Promise<{
+        message: string;
+    }>;
+    updateLoteGroup(loteId: string, idArticuloActual: number, idColorActual: number, dto: UpdateLoteDto): Promise<MovimientosStock[]>;
 }

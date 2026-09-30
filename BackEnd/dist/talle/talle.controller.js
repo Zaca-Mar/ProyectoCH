@@ -29,6 +29,9 @@ let TalleController = class TalleController {
     findOne(id) {
         return this.talleService.findOne(+id);
     }
+    remove(id) {
+        return this.talleService.remove(+id);
+    }
 };
 exports.TalleController = TalleController;
 __decorate([
@@ -51,6 +54,13 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], TalleController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], TalleController.prototype, "remove", null);
 exports.TalleController = TalleController = __decorate([
     (0, common_1.Controller)('talle'),
     __metadata("design:paramtypes", [talle_service_1.TalleService])

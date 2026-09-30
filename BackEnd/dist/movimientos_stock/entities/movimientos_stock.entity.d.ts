@@ -9,9 +9,10 @@ export declare class MovimientosStock {
     cantidad: number;
     observacion: string;
     fecha: string;
+    lote_id?: string;
     articulo: Articulo;
     color: Color;
     taller: Taller;
-    estado: Estado;
+    estado?: Estado;
     talle: Talle;
 }

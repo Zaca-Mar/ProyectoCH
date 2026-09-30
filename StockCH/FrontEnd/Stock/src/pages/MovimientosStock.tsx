@@ -141,47 +141,53 @@ export function MovimientosStock() {
   };
 
   const guardarMovimientoFinal = async () => {
-    if (isSaving) return;
-    setError('');
-    setSuccess(false);
+  if (isSaving) return;
+  setError('');
+  setSuccess(false);
 
-    if (!idTaller) {
-      setError('Debes seleccionar un taller obligatorio para procesar el remito.');
-      return;
-    }
+  if (!idTaller) {
+    setError('Debes seleccionar un taller obligatorio para procesar el remito.');
+    return;
+  }
 
-    if (listaDetalle.length === 0) {
-      setError('Debes añadir al menos un artículo a la lista para poder guardar.');
-      return;
-    }
+  if (listaDetalle.length === 0) {
+    setError('Debes añadir al menos un artículo a la lista para poder guardar.');
+    return;
+  }
 
-    setIsSaving(true);
-    try {
-      const solicitudes = listaDetalle.map(item => {
-        return movimientosService.create({
-          id_taller: Number(idTaller),
-          tipo_movimiento: tipoMovimiento,
-          id_articulo: Number(item.id_articulo),
-          id_talle: Number(item.id_talle),
-          id_color: Number(item.id_color),
-          cantidad: item.cantidad,
-          observacion: observacion.trim() || null,
-          fecha: fechaIngreso
-        } as any);
-      });
+  setIsSaving(true);
+  try {
+    // 👇 NUEVO: mismo lote_id para todo lo que se registre en este remito
+    const loteId = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `lote-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
-      await Promise.all(solicitudes);
-      setSuccess(true);
-      setListaDetalle([]);
-      setObservacion('');
-      setIdTaller('');
-      setFechaIngreso(new Date().toISOString().split('T')[0]);
-    } catch (err: any) {
-      setError('Error al registrar el bloque de movimientos en el servidor.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
+    const solicitudes = listaDetalle.map(item => {
+      return movimientosService.create({
+        id_taller: Number(idTaller),
+        tipo_movimiento: tipoMovimiento,
+        id_articulo: Number(item.id_articulo),
+        id_talle: Number(item.id_talle),
+        id_color: Number(item.id_color),
+        cantidad: item.cantidad,
+        observacion: observacion.trim() || null,
+        fecha: fechaIngreso,
+        lote_id: loteId,
+      } as any);
+    });
+
+    await Promise.all(solicitudes);
+    setSuccess(true);
+    setListaDetalle([]);
+    setObservacion('');
+    setIdTaller('');
+    setFechaIngreso(new Date().toISOString().split('T')[0]);
+  } catch (err: any) {
+    setError('Error al registrar el bloque de movimientos en el servidor.');
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   // 🛠️ AGRUPACIÓN PARA EL RESUMEN VISUAL
   const mapaResumen: { [key: string]: { id_articulo: string; id_color: string; nombre_articulo: string; nombre_color: string; curva: { [talle: string]: number } } } = {};

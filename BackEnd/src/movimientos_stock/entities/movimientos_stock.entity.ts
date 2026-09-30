@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { Articulo } from '../../articulos/entities/articulo.entity';
 import { Color } from '../../color/entities/color.entity';
 import { Taller } from '../../taller/entities/taller.entity';
@@ -21,6 +21,11 @@ export class MovimientosStock {
 
   @Column({ type: 'date', nullable: true })
   fecha!: string;
+
+  // 👇 NUEVO: identifica a qué remito/lote pertenece
+  @Index()
+  @Column({ type: 'varchar', length: 36, nullable: true })
+  lote_id?: string;
 
   @ManyToOne(() => Articulo, { eager: true })
   @JoinColumn({ name: 'id_articulo' })

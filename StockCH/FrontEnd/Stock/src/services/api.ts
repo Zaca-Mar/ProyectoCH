@@ -1,11 +1,10 @@
 import axios from 'axios';
-// Configuramos la URL base de tu backend de NestJS
+
 const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
 });
 
 export const movimientosService = {
-  // Traer todos los movimientos de stock
   getAll: async () => {
     const response = await API.get('/movimientos-stock');
     return response.data;
@@ -21,12 +20,12 @@ export const movimientosService = {
     id_estado?: number;
     observacion: string | null;
     fecha: string;
+    lote_id?: string; // 👈 NUEVO
   }) => {
     const response = await API.post('/movimientos-stock', data);
     return response.data;
   },
 
-  // 👇 NUEVO: editar un movimiento existente
   update: async (id: number, data: Partial<{
     id_taller: number;
     tipo_movimiento: string;
@@ -42,9 +41,37 @@ export const movimientosService = {
     return response.data;
   },
 
-  // 👇 NUEVO: borrar un movimiento existente
   delete: async (id: number) => {
     const response = await API.delete(`/movimientos-stock/${id}`);
+    return response.data;
+  },
+
+  // 👇 NUEVO: editar un lote/grupo completo
+  updateLote: async (
+    loteId: string,
+    idArticuloActual: number,
+    idColorActual: number,
+    data: {
+      id_taller: number;
+      tipo_movimiento: string;
+      id_articulo: number;
+      id_color: number;
+      fecha: string;
+      observacion: string | null;
+      items: { id_talle: number; cantidad: number }[];
+    }
+  ) => {
+    const response = await API.patch(`/movimientos-stock/lote/${loteId}`, data, {
+      params: { id_articulo: idArticuloActual, id_color: idColorActual },
+    });
+    return response.data;
+  },
+
+  // 👇 NUEVO: borrar un lote/grupo completo
+  deleteLote: async (loteId: string, idArticulo: number, idColor: number) => {
+    const response = await API.delete(`/movimientos-stock/lote/${loteId}`, {
+      params: { id_articulo: idArticulo, id_color: idColor },
+    });
     return response.data;
   },
 

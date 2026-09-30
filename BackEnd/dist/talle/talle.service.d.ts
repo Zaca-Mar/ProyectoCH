@@ -8,4 +8,8 @@ export declare class TalleService {
     }): Promise<Talle>;
     findAll(): Promise<Talle[]>;
     findOne(id: number): Promise<Talle | null>;
+    remove(id: number): Promise<{
+        message: string;
+    }>;
+    private compararTalles;
 }

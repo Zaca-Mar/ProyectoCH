@@ -16,15 +16,14 @@ exports.MovimientosStockController = void 0;
 const common_1 = require("@nestjs/common");
 const movimientos_stock_service_1 = require("./movimientos_stock.service");
 const create_movimientos_stock_dto_1 = require("./dto/create-movimientos_stock.dto");
+const update_movimientos_stock_dto_1 = require("./dto/update-movimientos_stock.dto");
+const update_lote_dto_1 = require("./dto/update-lote.dto");
 let MovimientosStockController = class MovimientosStockController {
     movimientosStockService;
     constructor(movimientosStockService) {
         this.movimientosStockService = movimientosStockService;
     }
     create(createMovimientosStockDto) {
-        console.log('=== CONTROLADOR BACKEND: DATOS RECIBIDOS ===');
-        console.log(createMovimientosStockDto);
-        console.log('============================================');
         return this.movimientosStockService.create(createMovimientosStockDto);
     }
     findAll() {
@@ -33,6 +32,18 @@ let MovimientosStockController = class MovimientosStockController {
     filter(idTaller, idEstado) {
         const estadoParsed = idEstado ? Number(idEstado) : 0;
         return this.movimientosStockService.findByTallerAndEstado(Number(idTaller), estadoParsed);
+    }
+    updateLote(loteId, idArticulo, idColor, dto) {
+        return this.movimientosStockService.updateLoteGroup(loteId, Number(idArticulo), Number(idColor), dto);
+    }
+    removeLote(loteId, idArticulo, idColor) {
+        return this.movimientosStockService.removeLoteGroup(loteId, Number(idArticulo), Number(idColor));
+    }
+    update(id, updateDto) {
+        return this.movimientosStockService.update(+id, updateDto);
+    }
+    remove(id) {
+        return this.movimientosStockService.remove(+id);
     }
 };
 exports.MovimientosStockController = MovimientosStockController;
@@ -57,6 +68,40 @@ __decorate([
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", void 0)
 ], MovimientosStockController.prototype, "filter", null);
+__decorate([
+    (0, common_1.Patch)('lote/:lote_id'),
+    __param(0, (0, common_1.Param)('lote_id')),
+    __param(1, (0, common_1.Query)('id_articulo')),
+    __param(2, (0, common_1.Query)('id_color')),
+    __param(3, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String, update_lote_dto_1.UpdateLoteDto]),
+    __metadata("design:returntype", void 0)
+], MovimientosStockController.prototype, "updateLote", null);
+__decorate([
+    (0, common_1.Delete)('lote/:lote_id'),
+    __param(0, (0, common_1.Param)('lote_id')),
+    __param(1, (0, common_1.Query)('id_articulo')),
+    __param(2, (0, common_1.Query)('id_color')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String]),
+    __metadata("design:returntype", void 0)
+], MovimientosStockController.prototype, "removeLote", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, update_movimientos_stock_dto_1.UpdateMovimientosStockDto]),
+    __metadata("design:returntype", void 0)
+], MovimientosStockController.prototype, "update", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], MovimientosStockController.prototype, "remove", null);
 exports.MovimientosStockController = MovimientosStockController = __decorate([
     (0, common_1.Controller)('movimientos-stock'),
     __metadata("design:paramtypes", [movimientos_stock_service_1.MovimientosStockService])

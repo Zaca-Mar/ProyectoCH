@@ -116,52 +116,57 @@ export function EgresosTaller() {
   };
 
   const handleGuardarRetiroMasivo = async () => {
-    if (isSaving) return;
-    setError('');
-    
-    const retirosValidos = Object.entries(cantidadesRetiro)
-      .map(([idTalle, cant]) => ({ idTalle: Number(idTalle), cantidad: Number(cant) }))
-      .filter(r => !isNaN(r.cantidad) && r.cantidad > 0);
+  if (isSaving) return;
+  setError('');
+  
+  const retirosValidos = Object.entries(cantidadesRetiro)
+    .map(([idTalle, cant]) => ({ idTalle: Number(idTalle), cantidad: Number(cant) }))
+    .filter(r => !isNaN(r.cantidad) && r.cantidad > 0);
 
-    if (retirosValidos.length === 0) {
-      setError('Por favor, ingresa una cantidad válida en al menos un talle.');
+  if (retirosValidos.length === 0) {
+    setError('Por favor, ingresa una cantidad válida en al menos un talle.');
+    return;
+  }
+
+  for (const r of retirosValidos) {
+    const talleDeuda = modeloSeleccionado.curva[r.idTalle]?.pendiente || 0;
+    if (r.cantidad > talleDeuda) {
+      setError(`No puedes retirar más de lo debido en el talle ${modeloSeleccionado.curva[r.idTalle].nombre}.`);
       return;
     }
+  }
 
-    // Validar topes máximos de deuda por talle
-    for (const r of retirosValidos) {
-      const talleDeuda = modeloSeleccionado.curva[r.idTalle]?.pendiente || 0;
-      if (r.cantidad > talleDeuda) {
-        setError(`No puedes retirar más de lo debido en el talle ${modeloSeleccionado.curva[r.idTalle].nombre}.`);
-        return;
-      }
-    }
+  setIsSaving(true);
+  try {
+    // 👇 NUEVO: mismo lote_id para todo este retiro
+    const loteId = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `lote-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
-    setIsSaving(true);
-    try {
-      const solicitudes = retirosValidos.map(r => {
-        return movimientosService.create({
-          id_taller: Number(idTaller),
-          tipo_movimiento: 'EGRESO',
-          id_articulo: modeloSeleccionado.id_articulo,
-          id_color: modeloSeleccionado.id_color,
-          id_talle: r.idTalle,
-          cantidad: r.cantidad,
-          observacion: observacion.trim(),
-          fecha: fechaEgreso
-        } as any);
-      });
+    const solicitudes = retirosValidos.map(r => {
+      return movimientosService.create({
+        id_taller: Number(idTaller),
+        tipo_movimiento: 'EGRESO',
+        id_articulo: modeloSeleccionado.id_articulo,
+        id_color: modeloSeleccionado.id_color,
+        id_talle: r.idTalle,
+        cantidad: r.cantidad,
+        observacion: observacion.trim(),
+        fecha: fechaEgreso,
+        lote_id: loteId,
+      } as any);
+    });
 
-      await Promise.all(solicitudes);
-      setSuccess(true);
-      setShowModal(false);
-      cargarStockPendiente(Number(idTaller));
-    } catch (err) {
-      setError('Error al procesar el lote de egresos en el servidor.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
+    await Promise.all(solicitudes);
+    setSuccess(true);
+    setShowModal(false);
+    cargarStockPendiente(Number(idTaller));
+  } catch (err) {
+    setError('Error al procesar el lote de egresos en el servidor.');
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   // 🧮 TOTAL PENDIENTE POR ARTÍCULO Y TOTAL GENERAL DEL TALLER
   const totalPendientePorArticulo = (curva: { [id_talle: string]: { nombre: string; pendiente: number } }) =>

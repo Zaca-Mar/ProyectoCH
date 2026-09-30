@@ -39,4 +39,6 @@ export class UpdateMovimientosStockDto {
   @IsOptional()
   @IsString()
   fecha?: string;
+
+  
 }

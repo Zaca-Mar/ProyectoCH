@@ -23,6 +23,7 @@ const OFFSET_IZQ = {
   operacion: ANCHOS.fecha,
   descripcion: ANCHOS.fecha + ANCHOS.operacion,
   color: ANCHOS.fecha + ANCHOS.operacion + ANCHOS.descripcion,
+  cantidad: ANCHOS.fecha + ANCHOS.operacion + ANCHOS.descripcion + ANCHOS.color, // 👈 NUEVO
 };
 
 const SOMBRA_IZQ: CSSProperties = { boxShadow: '2px 0 4px -2px rgba(0,0,0,0.35)' };
@@ -374,9 +375,10 @@ export function Consultas() {
                 <th rowSpan={2} className="align-middle" style={stickyIzq(OFFSET_IZQ.fecha, ANCHOS.fecha, '#e2e3e5')}>Fecha</th>
                 <th rowSpan={2} className="align-middle" style={stickyIzq(OFFSET_IZQ.operacion, ANCHOS.operacion, '#e2e3e5')}>Operación</th>
                 <th rowSpan={2} className="align-middle" style={stickyIzq(OFFSET_IZQ.descripcion, ANCHOS.descripcion, '#e2e3e5')}>Descripción / Artículo</th>
-                <th rowSpan={2} className="align-middle" style={stickyIzq(OFFSET_IZQ.color, ANCHOS.color, '#e2e3e5', SOMBRA_IZQ)}>Color</th>
+                <th rowSpan={2} className="align-middle" style={stickyIzq(OFFSET_IZQ.color, ANCHOS.color, '#e2e3e5')}>Color</th>
+                {/* 👇 MOVIDO: Cant. ahora va pegado a Color, antes de los Talles */}
+                <th rowSpan={2} className="align-middle text-white" style={stickyIzq(OFFSET_IZQ.cantidad, ANCHOS.cantidad, '#212529', SOMBRA_IZQ)}>Cant.</th>
                 <th colSpan={talles.length} className="bg-dark text-white py-1 text-uppercase small"> Talles </th>
-                <th rowSpan={2} className="align-middle bg-dark text-white" style={{ minWidth: ANCHOS.cantidad }}>Cant.</th>
                 <th rowSpan={2} className="align-middle table-active text-dark" style={{ minWidth: ANCHOS.saldoDeuda }}>Saldo Deuda</th>
               </tr>
               <tr className="bg-light">
@@ -410,7 +412,7 @@ export function Consultas() {
                           por talle para este artículo/color justo después de este movimiento */}
                       <tr className="table-light">
                         <td
-                          colSpan={4}
+                          colSpan={5}
                           className="text-end small fw-bold text-uppercase text-muted pe-3"
                           style={{ position: 'sticky', left: 0, zIndex: 2, background: '#f8f9fa' }}
                         >
@@ -459,9 +461,17 @@ export function Consultas() {
                         </td>
                         <td
                           className="text-uppercase small fw-semibold text-secondary"
-                          style={stickyIzq(OFFSET_IZQ.color, ANCHOS.color, '#fff', SOMBRA_IZQ)}
+                          style={stickyIzq(OFFSET_IZQ.color, ANCHOS.color, '#fff')}
                         >
                           {item.nombre_color}
+                        </td>
+
+                        {/* 👇 MOVIDO: Cantidad total neta del remito, ahora sticky y pegada a Color */}
+                        <td
+                          className="fw-bold fs-6 bg-light text-muted"
+                          style={stickyIzq(OFFSET_IZQ.cantidad, ANCHOS.cantidad, '#fff', SOMBRA_IZQ)}
+                        >
+                          {item.totalFilaOperacion}
                         </td>
 
                         {/* 🚀 RENDEREADO DE NÚMEROS LIMPIOS (SIN SIGNOS + NI -) */}
@@ -480,11 +490,6 @@ export function Consultas() {
                             </td>
                           );
                         })}
-
-                        {/* Cantidad total neta del remito de la fila */}
-                        <td className="fw-bold fs-6 bg-light text-muted">
-                          {item.totalFilaOperacion}
-                        </td>
 
                         {/* 🎯 SALDO GENERAL EXPLICITADO EN PALABRAS */}
                         <td className={`fs-6 table-active text-nowrap ${claseColorSaldo}`}>

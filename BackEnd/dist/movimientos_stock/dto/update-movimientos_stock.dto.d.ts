@@ -1,5 +1,11 @@
-import { CreateMovimientosStockDto } from './create-movimientos_stock.dto';
-declare const UpdateMovimientosStockDto_base: import("@nestjs/mapped-types").MappedType<Partial<CreateMovimientosStockDto>>;
-export declare class UpdateMovimientosStockDto extends UpdateMovimientosStockDto_base {
+export declare class UpdateMovimientosStockDto {
+    tipo_movimiento?: 'INGRESO' | 'EGRESO';
+    cantidad?: number;
+    id_articulo?: number;
+    id_color?: number;
+    id_taller?: number;
+    id_estado?: number;
+    id_talle?: number;
+    observacion?: string;
+    fecha?: string;
 }
-export {};

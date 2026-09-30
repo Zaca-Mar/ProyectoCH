@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const talle_entity_1 = require("./entities/talle.entity");
+const ORDEN_LETRAS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL'];
 let TalleService = class TalleService {
     talleRepository;
     constructor(talleRepository) {
@@ -27,10 +28,39 @@ let TalleService = class TalleService {
         return await this.talleRepository.save(nuevo);
     }
     async findAll() {
-        return await this.talleRepository.find();
+        const talles = await this.talleRepository.find();
+        return talles.sort((a, b) => this.compararTalles(a.nombre, b.nombre));
     }
     async findOne(id) {
         return await this.talleRepository.findOne({ where: { id_talle: id } });
+    }
+    async remove(id) {
+        const talle = await this.talleRepository.findOne({ where: { id_talle: id } });
+        if (!talle) {
+            throw new common_1.NotFoundException(`Talle con ID ${id} no encontrado`);
+        }
+        try {
+            await this.talleRepository.remove(talle);
+            return { message: `Talle "${talle.nombre}" eliminado correctamente` };
+        }
+        catch (err) {
+            throw new common_1.BadRequestException(`No se pudo eliminar el talle "${talle.nombre}": probablemente ya está en uso en algún movimiento de stock.`);
+        }
+    }
+    compararTalles(a, b) {
+        const numA = Number(a);
+        const numB = Number(b);
+        const esNumA = !isNaN(numA) && a.trim() !== '';
+        const esNumB = !isNaN(numB) && b.trim() !== '';
+        if (esNumA && esNumB)
+            return numA - numB;
+        if (esNumA && !esNumB)
+            return -1;
+        if (!esNumA && esNumB)
+            return 1;
+        const idxA = ORDEN_LETRAS.indexOf(a);
+        const idxB = ORDEN_LETRAS.indexOf(b);
+        return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
     }
 };
 exports.TalleService = TalleService;

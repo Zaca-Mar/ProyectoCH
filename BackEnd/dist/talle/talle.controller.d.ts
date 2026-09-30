@@ -7,4 +7,7 @@ export declare class TalleController {
     }): Promise<import("./entities/talle.entity").Talle>;
     findAll(): Promise<import("./entities/talle.entity").Talle[]>;
     findOne(id: string): Promise<import("./entities/talle.entity").Talle | null>;
+    remove(id: string): Promise<{
+        message: string;
+    }>;
 }

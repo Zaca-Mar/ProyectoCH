@@ -22,6 +22,7 @@ let MovimientosStock = class MovimientosStock {
     cantidad;
     observacion;
     fecha;
+    lote_id;
     articulo;
     color;
     taller;
@@ -50,6 +51,11 @@ __decorate([
     __metadata("design:type", String)
 ], MovimientosStock.prototype, "fecha", void 0);
 __decorate([
+    (0, typeorm_1.Index)(),
+    (0, typeorm_1.Column)({ type: 'varchar', length: 36, nullable: true }),
+    __metadata("design:type", String)
+], MovimientosStock.prototype, "lote_id", void 0);
+__decorate([
     (0, typeorm_1.ManyToOne)(() => articulo_entity_1.Articulo, { eager: true }),
     (0, typeorm_1.JoinColumn)({ name: 'id_articulo' }),
     __metadata("design:type", articulo_entity_1.Articulo)
@@ -65,7 +71,7 @@ __decorate([
     __metadata("design:type", taller_entity_1.Taller)
 ], MovimientosStock.prototype, "taller", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => estado_entity_1.Estado, (estado) => estado.movimientos, { eager: true }),
+    (0, typeorm_1.ManyToOne)(() => estado_entity_1.Estado, (estado) => estado.movimientos, { eager: true, nullable: true }),
     (0, typeorm_1.JoinColumn)({ name: 'id_estado' }),
     __metadata("design:type", estado_entity_1.Estado)
 ], MovimientosStock.prototype, "estado", void 0);

@@ -4,6 +4,7 @@ import { FindOptionsWhere, Repository } from 'typeorm';
 import { MovimientosStock } from './entities/movimientos_stock.entity';
 import { CreateMovimientosStockDto } from './dto/create-movimientos_stock.dto';
 import { UpdateMovimientosStockDto } from './dto/update-movimientos_stock.dto';
+import { UpdateLoteDto } from './dto/update-lote.dto';
 import { ArticulosService } from '../articulos/articulos.service';
 import { TallerService } from '../taller/taller.service';
 import { EstadoService } from '../estado/estado.service';
@@ -45,6 +46,7 @@ export class MovimientosStockService {
     nuevoMovimiento.color = color;
     nuevoMovimiento.talle = talle;
     nuevoMovimiento.fecha = createDto.fecha ?? '';
+    nuevoMovimiento.lote_id = createDto.lote_id; // 👈 NUEVO
     if (estado) nuevoMovimiento.estado = estado;
 
     return await this.movimientosRepository.save(nuevoMovimiento);
@@ -75,7 +77,6 @@ export class MovimientosStockService {
     });
   }
 
-  // 👇 NUEVO: editar un movimiento existente
   async update(id: number, updateDto: UpdateMovimientosStockDto): Promise<MovimientosStock> {
     const movimiento = await this.movimientosRepository.findOne({
       where: { id_movimiento: id },
@@ -131,7 +132,6 @@ export class MovimientosStockService {
     return await this.movimientosRepository.save(movimiento);
   }
 
-  // 👇 NUEVO: borrar un movimiento existente
   async remove(id: number): Promise<{ message: string }> {
     const movimiento = await this.movimientosRepository.findOne({ where: { id_movimiento: id } });
     if (!movimiento) {
@@ -139,5 +139,74 @@ export class MovimientosStockService {
     }
     await this.movimientosRepository.remove(movimiento);
     return { message: `Movimiento #${id} eliminado correctamente` };
+  }
+
+  // 👇 NUEVO: buscar todos los movimientos de un lote+artículo+color
+  private async findLoteGroup(
+    loteId: string,
+    idArticulo: number,
+    idColor: number,
+  ): Promise<MovimientosStock[]> {
+    return await this.movimientosRepository.find({
+      where: {
+        lote_id: loteId,
+        articulo: { id_articulo: idArticulo },
+        color: { id_color: idColor },
+      },
+    });
+  }
+
+  // 👇 NUEVO: borrar un grupo (lote+artículo+color) completo
+  async removeLoteGroup(loteId: string, idArticulo: number, idColor: number): Promise<{ message: string }> {
+    const movimientos = await this.findLoteGroup(loteId, idArticulo, idColor);
+    if (movimientos.length === 0) {
+      throw new NotFoundException('No se encontraron movimientos para ese lote y artículo/color');
+    }
+    await this.movimientosRepository.remove(movimientos);
+    return { message: `Se eliminaron ${movimientos.length} movimientos del lote` };
+  }
+
+  // 👇 NUEVO: editar un grupo (lote+artículo+color) completo — borra y recrea la curva
+  async updateLoteGroup(
+    loteId: string,
+    idArticuloActual: number,
+    idColorActual: number,
+    dto: UpdateLoteDto,
+  ): Promise<MovimientosStock[]> {
+    const existentes = await this.findLoteGroup(loteId, idArticuloActual, idColorActual);
+    if (existentes.length === 0) {
+      throw new NotFoundException('No se encontraron movimientos para ese lote y artículo/color');
+    }
+
+    const articulo = await this.articulosService.findOne(dto.id_articulo);
+    const taller = await this.tallerService.findOne(dto.id_taller);
+    const color = await this.colorService.findOne(dto.id_color);
+    if (!articulo || !taller || !color) {
+      throw new BadRequestException('Artículo, taller o color no encontrado');
+    }
+
+    return await this.movimientosRepository.manager.transaction(async (manager) => {
+      await manager.remove(existentes);
+
+      const nuevos: MovimientosStock[] = [];
+      for (const item of dto.items) {
+        const talle = await this.talleService.findOne(item.id_talle);
+        if (!talle) throw new BadRequestException(`Talle ${item.id_talle} no encontrado`);
+
+        const mov = new MovimientosStock();
+        mov.lote_id = loteId;
+        mov.tipo_movimiento = dto.tipo_movimiento;
+        mov.cantidad = item.cantidad;
+        mov.observacion = dto.observacion ?? '';
+        mov.fecha = dto.fecha ?? '';
+        mov.articulo = articulo;
+        mov.taller = taller;
+        mov.color = color;
+        mov.talle = talle;
+        nuevos.push(mov);
+      }
+
+      return await manager.save(nuevos);
+    });
   }
 }
