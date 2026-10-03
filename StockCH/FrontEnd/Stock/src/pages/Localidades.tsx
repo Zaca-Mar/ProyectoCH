@@ -10,9 +10,10 @@ export function Localidades() {
     id_provincia: ''
   });
 
-  const [editingId, setEditingId] = useState<number | null>(null); // 👈 NUEVO
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [mensajeEliminado, setMensajeEliminado] = useState(''); // 👈 NUEVO
 
   useEffect(() => {
     cargarDatosIniciales();
@@ -44,7 +45,6 @@ export function Localidades() {
     });
   };
 
-  // 👇 NUEVO
   const handleEdit = (localidad: any) => {
     setFormData({
       nombre: localidad.nombre,
@@ -52,20 +52,47 @@ export function Localidades() {
     });
     setEditingId(localidad.id_localidad);
     setSuccess(false);
+    setMensajeEliminado('');
     setError('');
   };
 
-  // 👇 NUEVO
   const handleCancelEdit = () => {
     setEditingId(null);
     setFormData({ nombre: '', id_provincia: '' });
     setError('');
   };
 
+  // 👇 NUEVO: eliminar localidad
+  const handleDelete = async (localidad: any) => {
+    if (!window.confirm(`¿Eliminar la localidad "${localidad.nombre}"?`)) return;
+
+    setError('');
+    setSuccess(false);
+    setMensajeEliminado('');
+
+    try {
+      await auxiliaresService.deleteLocalidad(localidad.id_localidad);
+
+      // Si justo se estaba editando esta localidad, salir del modo edición
+      if (editingId === localidad.id_localidad) {
+        setEditingId(null);
+        setFormData({ nombre: '', id_provincia: '' });
+      }
+
+      setMensajeEliminado('¡Localidad eliminada con éxito!');
+
+      const listaLocalidades = await auxiliaresService.getLocalidades();
+      setLocalidades(listaLocalidades.sort((a: any, b: any) => a.nombre.localeCompare(b.nombre)));
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || 'Error al eliminar la localidad.');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess(false);
+    setMensajeEliminado('');
 
     if (!formData.nombre.trim() || !formData.id_provincia) {
       setError('Por favor, ingresa el nombre y selecciona una provincia.');
@@ -101,6 +128,7 @@ export function Localidades() {
       <h2 className="mb-4 text-center text-uppercase fw-bold">Gestión de Localidades</h2>
       {error && <Alert variant="danger">{error}</Alert>}
       {success && <Alert variant="success">{editingId ? '¡Localidad actualizada con éxito!' : '¡Localidad registrada con éxito!'}</Alert>}
+      {mensajeEliminado && <Alert variant="success">{mensajeEliminado}</Alert>}
 
       <Row className="mb-5">
         <Col md={12}>
@@ -172,7 +200,7 @@ export function Localidades() {
                     <th style={{ width: '15%' }}>ID Localidad</th>
                     <th>Nombre / Descripción</th>
                     <th>Provincia</th>
-                    <th style={{ width: '15%' }}>Acciones</th>
+                    <th style={{ width: '20%' }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -191,9 +219,14 @@ export function Localidades() {
                           </span>
                         </td>
                         <td>
-                          <Button size="sm" variant="warning" onClick={() => handleEdit(loc)}>
-                            Editar
-                          </Button>
+                          <div className="d-flex gap-2 justify-content-center">
+                            <Button size="sm" variant="warning" onClick={() => handleEdit(loc)}>
+                              Editar
+                            </Button>
+                            <Button size="sm" variant="danger" onClick={() => handleDelete(loc)}>
+                              Eliminar
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))

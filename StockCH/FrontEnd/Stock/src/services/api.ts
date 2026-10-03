@@ -125,4 +125,20 @@ export const auxiliaresService = {
     const response = await API.patch(`/localidad/${id}`, data);
     return response.data;
   },
+    deleteArticulo: async (id: number) => {
+    const response = await API.delete(`/articulos/${id}`);
+    return response.data;
+  },
+  deleteColor: async (id: number) => {
+    const response = await API.delete(`/color/${id}`);
+    return response.data;
+  },
+  deleteTaller: async (id: number) => {
+    const response = await API.delete(`/taller/${id}`);
+    return response.data;
+  },
+  deleteLocalidad: async (id: number) => {
+    const response = await API.delete(`/localidad/${id}`);
+    return response.data;
+  }
 };

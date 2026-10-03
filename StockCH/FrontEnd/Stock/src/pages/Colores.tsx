@@ -5,10 +5,11 @@ import { auxiliaresService } from '../services/api';
 export function Colores() {
   const [colores, setColores] = useState<any[]>([]);
   const [nombre, setNombre] = useState('');
-  const [editingId, setEditingId] = useState<number | null>(null); // 👈 NUEVO
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [mensajeEliminado, setMensajeEliminado] = useState(''); // 👈 NUEVO
 
   useEffect(() => { cargarColores(); }, []);
 
@@ -19,24 +20,47 @@ export function Colores() {
     } catch (err) { setError('Error al cargar los colores.'); }
   };
 
-  // 👇 NUEVO
   const handleEdit = (color: any) => {
     setNombre(color.nombre);
     setEditingId(color.id_color);
     setSuccess(false);
+    setMensajeEliminado('');
     setError('');
   };
 
-  // 👇 NUEVO
   const handleCancelEdit = () => {
     setEditingId(null);
     setNombre('');
     setError('');
   };
 
+  // 👇 NUEVO: eliminar color
+  const handleDelete = async (color: any) => {
+    if (!window.confirm(`¿Eliminar el color "${color.nombre}"?`)) return;
+
+    setError('');
+    setSuccess(false);
+    setMensajeEliminado('');
+
+    try {
+      await auxiliaresService.deleteColor(color.id_color);
+
+      // Si justo se estaba editando este color, salir del modo edición
+      if (editingId === color.id_color) {
+        setEditingId(null);
+        setNombre('');
+      }
+
+      setMensajeEliminado('¡Color eliminado con éxito!');
+      cargarColores();
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || 'Error al eliminar el color.');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(''); setSuccess(false);
+    setError(''); setSuccess(false); setMensajeEliminado('');
     if (!nombre.trim()) return;
 
     try {
@@ -60,6 +84,7 @@ export function Colores() {
       <h2 className="mb-4 text-center text-uppercase fw-bold">Gestión de Colores</h2>
       {error && <Alert variant="danger">{error}</Alert>}
       {success && <Alert variant="success">{editingId ? '¡Color actualizado con éxito!' : '¡Color registrado con éxito!'}</Alert>}
+      {mensajeEliminado && <Alert variant="success">{mensajeEliminado}</Alert>}
 
       <Row className="mb-5">
         <Col md={12}>
@@ -103,7 +128,7 @@ export function Colores() {
                   <tr>
                     <th style={{ width: '15%' }}>ID Color</th>
                     <th>Nombre</th>
-                    <th style={{ width: '15%' }}>Acciones</th>
+                    <th style={{ width: '20%' }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -115,9 +140,14 @@ export function Colores() {
                         <td>{c.id_color}</td>
                         <td className="fw-bold text-uppercase">{c.nombre}</td>
                         <td>
-                          <Button size="sm" variant="warning" onClick={() => handleEdit(c)}>
-                            Editar
-                          </Button>
+                          <div className="d-flex gap-2 justify-content-center">
+                            <Button size="sm" variant="warning" onClick={() => handleEdit(c)}>
+                              Editar
+                            </Button>
+                            <Button size="sm" variant="danger" onClick={() => handleDelete(c)}>
+                              Eliminar
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))

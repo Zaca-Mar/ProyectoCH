@@ -5,10 +5,11 @@ import { auxiliaresService } from '../services/api';
 export function Articulos() {
   const [articulos, setArticulos] = useState<any[]>([]);
   const [nombre, setNombre] = useState('');
-  const [editingId, setEditingId] = useState<number | null>(null); // 👈 NUEVO
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [mensajeEliminado, setMensajeEliminado] = useState(''); // 👈 NUEVO
 
   useEffect(() => {
     cargarArticulos();
@@ -23,25 +24,49 @@ export function Articulos() {
     }
   };
 
-  // 👇 NUEVO
   const handleEdit = (articulo: any) => {
     setNombre(articulo.nombre);
     setEditingId(articulo.id_articulo);
     setSuccess(false);
+    setMensajeEliminado('');
     setError('');
   };
 
-  // 👇 NUEVO
   const handleCancelEdit = () => {
     setEditingId(null);
     setNombre('');
     setError('');
   };
 
+  // 👇 NUEVO: eliminar artículo
+  const handleDelete = async (articulo: any) => {
+    if (!window.confirm(`¿Eliminar el artículo "${articulo.nombre}"?`)) return;
+
+    setError('');
+    setSuccess(false);
+    setMensajeEliminado('');
+
+    try {
+      await auxiliaresService.deleteArticulo(articulo.id_articulo);
+
+      // Si justo se estaba editando este artículo, salir del modo edición
+      if (editingId === articulo.id_articulo) {
+        setEditingId(null);
+        setNombre('');
+      }
+
+      setMensajeEliminado('¡Artículo eliminado con éxito!');
+      cargarArticulos();
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || 'Error al eliminar el artículo.');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess(false);
+    setMensajeEliminado('');
 
     if (!nombre.trim()) {
       setError('Por favor, ingresa el nombre del artículo.');
@@ -70,6 +95,7 @@ export function Articulos() {
 
       {error && <Alert variant="danger">{error}</Alert>}
       {success && <Alert variant="success">{editingId ? '¡Artículo actualizado con éxito!' : '¡Artículo registrado con éxito!'}</Alert>}
+      {mensajeEliminado && <Alert variant="success">{mensajeEliminado}</Alert>}
 
       <Row className="mb-5">
         <Col md={12}>
@@ -122,7 +148,7 @@ export function Articulos() {
                   <tr>
                     <th style={{ width: '15%' }}>ID Artículo</th>
                     <th>Nombre / Descripción</th>
-                    <th style={{ width: '15%' }}>Acciones</th>
+                    <th style={{ width: '20%' }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -136,9 +162,14 @@ export function Articulos() {
                         <td>{a.id_articulo}</td>
                         <td className="fw-bold text-uppercase text-start ps-5">{a.nombre}</td>
                         <td>
-                          <Button size="sm" variant="warning" onClick={() => handleEdit(a)}>
-                            Editar
-                          </Button>
+                          <div className="d-flex gap-2 justify-content-center">
+                            <Button size="sm" variant="warning" onClick={() => handleEdit(a)}>
+                              Editar
+                            </Button>
+                            <Button size="sm" variant="danger" onClick={() => handleDelete(a)}>
+                              Eliminar
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))

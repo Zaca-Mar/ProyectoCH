@@ -13,9 +13,10 @@ export function Talleres() {
     id_localidad: ''
   });
 
-  const [editingId, setEditingId] = useState<number | null>(null); // 👈 NUEVO
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [mensajeEliminado, setMensajeEliminado] = useState(''); // 👈 NUEVO
 
   useEffect(() => {
     cargarDatosIniciales();
@@ -41,7 +42,7 @@ export function Talleres() {
     });
   };
 
-  // 👇 NUEVO: precarga el formulario con los datos del taller elegido
+  // Precarga el formulario con los datos del taller elegido
   const handleEdit = (taller: any) => {
     setFormData({
       nombre: taller.nombre,
@@ -51,20 +52,48 @@ export function Talleres() {
     });
     setEditingId(taller.id_taller);
     setSuccess(false);
+    setMensajeEliminado('');
     setError('');
   };
 
-  // 👇 NUEVO: cancela el modo edición y limpia el formulario
+  // Cancela el modo edición y limpia el formulario
   const handleCancelEdit = () => {
     setEditingId(null);
     setFormData({ nombre: '', calle: '', numero: '', id_localidad: '' });
     setError('');
   };
 
+  // 👇 NUEVO: eliminar taller
+  const handleDelete = async (taller: any) => {
+    if (!window.confirm(`¿Eliminar el taller "${taller.nombre}"?`)) return;
+
+    setError('');
+    setSuccess(false);
+    setMensajeEliminado('');
+
+    try {
+      await auxiliaresService.deleteTaller(taller.id_taller);
+
+      // Si justo se estaba editando este taller, salir del modo edición
+      if (editingId === taller.id_taller) {
+        setEditingId(null);
+        setFormData({ nombre: '', calle: '', numero: '', id_localidad: '' });
+      }
+
+      setMensajeEliminado('¡Taller eliminado con éxito!');
+
+      const listaTalleres = await auxiliaresService.getTalleres();
+      setTalleres(listaTalleres);
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || 'Error al eliminar el taller.');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess(false);
+    setMensajeEliminado('');
 
     if (!formData.nombre || !formData.calle || !formData.numero || !formData.id_localidad) {
       setError('Por favor, completa todos los campos del formulario.');
@@ -80,11 +109,9 @@ export function Talleres() {
       };
 
       if (editingId) {
-        // 👇 Modo edición
         await auxiliaresService.updateTaller(editingId, payload);
         setEditingId(null);
       } else {
-        // Modo creación (como antes)
         await auxiliaresService.createTaller(payload);
       }
 
@@ -105,6 +132,7 @@ export function Talleres() {
 
       {error && <Alert variant="danger">{error}</Alert>}
       {success && <Alert variant="success">{editingId ? '¡Taller actualizado con éxito!' : '¡Taller registrado con éxito!'}</Alert>}
+      {mensajeEliminado && <Alert variant="success">{mensajeEliminado}</Alert>}
 
       <Row className="mb-5">
         <Col md={12}>
@@ -225,9 +253,14 @@ export function Talleres() {
                         <td>{t.numero}</td>
                         <td>{t.localidad?.nombre || t.id_localidad}</td>
                         <td>
-                          <Button size="sm" variant="warning" onClick={() => handleEdit(t)}>
-                            Editar
-                          </Button>
+                          <div className="d-flex gap-2 justify-content-center">
+                            <Button size="sm" variant="warning" onClick={() => handleEdit(t)}>
+                              Editar
+                            </Button>
+                            <Button size="sm" variant="danger" onClick={() => handleDelete(t)}>
+                              Eliminar
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))
