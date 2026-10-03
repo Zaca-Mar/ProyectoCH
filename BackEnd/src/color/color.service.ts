@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Color } from './entities/color.entity';
 import { CreateColorDto } from './dto/create-color.dto';
 import { UpdateColorDto } from './dto/update-color.dto';
+import{QueryFailedError} from 'typeorm'
 
 @Injectable()
 export class ColorService {
@@ -35,4 +36,21 @@ export class ColorService {
 
     return await this.colorRepository.save(color);
   }
+
+  async remove(id: number): Promise<{ message: string }> {
+  const color = await this.findOne(id);
+  if (!color) throw new NotFoundException(`Color con ID ${id} no encontrado`);
+
+  try {
+    await this.colorRepository.delete({ id_color: id });
+    return { message: 'Color eliminado correctamente' };
+  } catch (error) {
+    if (error instanceof QueryFailedError && (error as any).errno === 1451) {
+      throw new ConflictException(
+        'No se puede eliminar el color porque está siendo usado',
+      );
+    }
+    throw error;
+  }
+}
 }

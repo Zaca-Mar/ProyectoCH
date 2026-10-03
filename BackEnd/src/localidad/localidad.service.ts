@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
 import { Localidad } from './entities/localidad.entity';
 import { CreateLocalidadDto } from './dto/create-localidad.dto';
 import { UpdateLocalidadDto } from './dto/update-localidad.dto';
@@ -52,4 +52,21 @@ export class LocalidadService {
 
     return await this.localidadRepository.save(localidad);
   }
+
+  async remove(id: number): Promise<{ message: string }> {
+    const color = await this.findOne(id);
+    if (!color) throw new NotFoundException(`Color con ID ${id} no encontrado`);
+  
+    try {
+      await this.localidadRepository.delete({ id_localidad: id });
+      return { message: 'Localidad eliminada correctamente' };
+    } catch (error) {
+      if (error instanceof QueryFailedError && (error as any).errno === 1451) {
+        throw new ConflictException(
+          'No se puede eliminar la localidad porque está siendo usada',
+        );
+      }
+      throw error;
+    }
+}
 }

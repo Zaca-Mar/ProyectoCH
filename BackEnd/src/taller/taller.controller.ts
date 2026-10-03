@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Delete, ParseIntPipe } from '@nestjs/common';
 import { TallerService } from './taller.service';
 import { CreateTallerDto } from './dto/create-taller.dto';
 import { UpdateTallerDto } from './dto/update-taller.dto';
@@ -25,5 +25,10 @@ export class TallerController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateTallerDto: UpdateTallerDto) {
     return this.tallerService.update(+id, updateTallerDto);
+  }
+
+  @Delete(':id')
+    remove(@Param('id', ParseIntPipe) id: number) {
+    return this.tallerService.remove(id);
   }
 }

@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
 import { Taller } from './entities/taller.entity';
 import { CreateTallerDto } from './dto/create-taller.dto';
 import { UpdateTallerDto } from './dto/update-taller.dto';
@@ -50,5 +50,21 @@ export class TallerService {
     });
 
     return await this.tallerRepository.save(taller);
+  }
+  async remove(id: number): Promise<{ message: string }> {
+    const color = await this.findOne(id);
+    if (!color) throw new NotFoundException(`Color con ID ${id} no encontrado`);
+  
+    try {
+      await this.tallerRepository.delete({ id_taller: id });
+      return { message: 'Taller eliminado correctamente' };
+    } catch (error) {
+      if (error instanceof QueryFailedError && (error as any).errno === 1451) {
+        throw new ConflictException(
+          'No se puede eliminar el taller porque está siendo usado',
+        );
+      }
+      throw error;
+    }
   }
 }

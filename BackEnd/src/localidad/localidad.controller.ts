@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, ParseIntPipe, Delete } from '@nestjs/common';
 import { LocalidadService } from './localidad.service';
 import { CreateLocalidadDto } from './dto/create-localidad.dto';
 import { UpdateLocalidadDto } from './dto/update-localidad.dto';
@@ -25,5 +25,10 @@ export class LocalidadController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateLocalidadDto: UpdateLocalidadDto) {
     return this.localidadService.update(+id, updateLocalidadDto);
+  }
+
+  @Delete(':id')
+    remove(@Param('id', ParseIntPipe) id: number) {
+    return this.localidadService.remove(id);
   }
 }

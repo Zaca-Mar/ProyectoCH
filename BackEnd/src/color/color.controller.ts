@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe } from '@nestjs/common';
 import { ColorService } from './color.service';
 import { CreateColorDto } from './dto/create-color.dto';
 import { UpdateColorDto } from './dto/update-color.dto';
@@ -21,4 +21,9 @@ export class ColorController {
   update(@Param('id') id: string, @Body() updateColorDto: UpdateColorDto) {
     return this.colorService.update(+id, updateColorDto);
   }
+
+  @Delete(':id')
+  remove(@Param('id', ParseIntPipe) id: number) {
+  return this.colorService.remove(id);
+}
 }

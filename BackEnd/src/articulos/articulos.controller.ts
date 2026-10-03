@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Delete, ParseIntPipe } from '@nestjs/common';
 import { ArticulosService } from './articulos.service';
 import { CreateArticuloDto } from './dto/create-articulo.dto';
 import { UpdateArticuloDto } from './dto/update-articulo.dto';
@@ -20,5 +20,10 @@ export class ArticulosController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateArticuloDto: UpdateArticuloDto) {
     return this.articulosService.update(+id, updateArticuloDto);
+  }
+
+  @Delete(':id')
+    remove(@Param('id', ParseIntPipe) id: number) {
+    return this.articulosService.remove(id);
   }
 }
